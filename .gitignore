@@ -1,0 +1,25 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next
+/out
+
+# testing
+/coverage
+
+# environment files
+.env*
+!.env.example
+
+# deployment
+.vercel
+
+# operating system and editors
+.DS_Store
+Thumbs.db
+*.swp
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
