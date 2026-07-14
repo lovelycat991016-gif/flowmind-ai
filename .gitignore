@@ -15,6 +15,9 @@
 # deployment
 .vercel
 
+# local visual design sessions
+.superpowers/
+
 # operating system and editors
 .DS_Store
 Thumbs.db
