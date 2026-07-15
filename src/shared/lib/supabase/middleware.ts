@@ -10,6 +10,15 @@ function copyCookies(source: NextResponse, target: NextResponse) {
 }
 
 export async function updateSession(request: NextRequest) {
+  const dashboardPreviewEnabled =
+    process.env.NODE_ENV === "development" &&
+    process.env.DASHBOARD_PREVIEW === "true" &&
+    request.nextUrl.pathname.startsWith("/dashboard");
+
+  if (dashboardPreviewEnabled) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
   const { supabaseAnonKey, supabaseUrl } = getPublicEnv();
 

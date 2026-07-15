@@ -24,7 +24,9 @@ export function AuthPanel({
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle as="h1" className="text-2xl">
+          {title}
+        </CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
