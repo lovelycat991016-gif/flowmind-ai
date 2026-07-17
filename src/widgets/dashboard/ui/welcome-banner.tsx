@@ -1,4 +1,4 @@
-import { ArrowRight, Upload } from "lucide-react";
+import { ArrowRight, CalendarPlus } from "lucide-react";
 
 import { buttonVariants } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
@@ -27,14 +27,14 @@ export function WelcomeBanner({ userName }: { userName: string }) {
       <div className="flex flex-wrap gap-3">
         <a
           className={cn(buttonVariants({ size: "lg" }), "min-w-40")}
-          href="#quick-actions"
+          href="/meetings/new"
         >
-          <Upload aria-hidden="true" className="size-4" />
-          Upload recording
+          <CalendarPlus aria-hidden="true" className="size-4" />
+          New meeting
         </a>
         <a
           className={buttonVariants({ size: "lg", variant: "outline" })}
-          href="#recent-meetings"
+          href="/meetings"
         >
           View meetings
           <ArrowRight aria-hidden="true" className="size-4" />

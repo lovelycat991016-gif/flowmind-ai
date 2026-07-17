@@ -1,36 +1,15 @@
-import {
-  CalendarDays,
-  CheckCircle2,
-  Clock3,
-  ListChecks,
-  type LucideIcon,
-} from "lucide-react";
-
-import type {
-  DashboardStatistic,
-  StatisticIcon,
-  StatisticTone,
-} from "@/features/dashboard/model/dashboard-mock-data";
+import { CalendarDays, Archive, CalendarRange, Layers3, type LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/shared/ui/card";
 
-const icons: Record<StatisticIcon, LucideIcon> = {
-  meetings: CalendarDays,
-  time: Clock3,
-  actions: ListChecks,
-  completion: CheckCircle2,
-};
-
-const toneClasses: Record<StatisticTone, string> = {
-  success: "bg-success-muted text-success",
-  info: "bg-info-muted text-info",
-  warning: "bg-warning-muted text-warning",
-  neutral: "bg-muted text-muted-foreground",
+type Statistic = { id: string; label: string; value: number; context: string; icon: "total" | "active" | "archived" | "week" };
+const icons: Record<Statistic["icon"], LucideIcon> = {
+  total: Layers3, active: CalendarDays, archived: Archive, week: CalendarRange,
 };
 
 export function StatisticCard({
   statistic,
 }: {
-  statistic: DashboardStatistic;
+  statistic: Statistic;
 }) {
   const Icon = icons[statistic.icon];
 
@@ -41,7 +20,7 @@ export function StatisticCard({
     >
       <CardContent className="flex min-h-36 flex-col justify-between p-5">
         <div
-          className={`flex size-9 items-center justify-center rounded-md ${toneClasses[statistic.tone]}`}
+          className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-md"
         >
           <Icon aria-hidden="true" className="size-4" />
         </div>

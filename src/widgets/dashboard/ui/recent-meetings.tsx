@@ -1,10 +1,10 @@
-import { Clock3, UsersRound, Video } from "lucide-react";
+import { CalendarDays, Video } from "lucide-react";
 
 import {
-  formatMeetingDuration,
-  type Meeting,
+  formatMeetingDate,
+  type MeetingListItem,
 } from "@/entities/meeting/model/meeting";
-import { MeetingStatusBadge } from "@/entities/meeting/ui/meeting-status-badge";
+import { EmptyPlaceholder } from "@/shared/ui/empty-placeholder";
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import {
 export function RecentMeetings({
   meetings,
 }: {
-  meetings: ReadonlyArray<Meeting>;
+  meetings: ReadonlyArray<MeetingListItem>;
 }) {
   return (
     <Card className="overflow-hidden" id="recent-meetings">
@@ -24,45 +24,36 @@ export function RecentMeetings({
         <CardTitle as="h2" id="recent-meetings-title">
           Recent meetings
         </CardTitle>
-        <CardDescription>
-          Your latest meeting activity and processing status.
-        </CardDescription>
+        <CardDescription>Your latest active meetings.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <ul aria-label="Recent meetings" className="divide-border divide-y">
-          {meetings.map((meeting) => (
-            <li
-              className="grid min-h-20 grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-4 sm:grid-cols-[40px_minmax(0,1fr)_96px_108px] sm:px-6"
-              data-testid="meeting-row"
-              key={meeting.id}
-            >
-              <span className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-md">
-                <Video aria-hidden="true" className="size-4" />
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">
-                  {meeting.title}
-                </p>
-                <p className="text-muted-foreground mt-1 text-xs">
-                  {meeting.dateLabel} · {meeting.timeLabel}
-                </p>
-              </div>
-              <div className="justify-self-end sm:order-last">
-                <MeetingStatusBadge status={meeting.status} />
-              </div>
-              <div className="text-muted-foreground col-start-2 flex items-center gap-3 text-xs sm:col-auto sm:flex-col sm:items-start sm:gap-1">
-                <span className="flex items-center gap-1.5">
-                  <Clock3 aria-hidden="true" className="size-3.5" />
-                  {formatMeetingDuration(meeting.durationMinutes)}
+        {!meetings.length ? (
+          <EmptyPlaceholder
+            className="min-h-44 border-0 shadow-none"
+            description="Create a meeting to see it here."
+            icon={Video}
+            title="No recent meetings"
+          />
+        ) : (
+          <ul aria-label="Recent meetings" className="divide-border divide-y">
+            {meetings.map((meeting) => (
+              <li
+                className="grid min-h-20 grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-4 sm:grid-cols-[40px_minmax(0,1fr)_auto] sm:px-6"
+                data-testid="meeting-row"
+                key={meeting.id}
+              >
+                <span className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-md">
+                  <Video aria-hidden="true" className="size-4" />
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <UsersRound aria-hidden="true" className="size-3.5" />
-                  {meeting.participantCount} people
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
+                <p className="truncate text-sm font-semibold">{meeting.title}</p>
+                <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                  <CalendarDays aria-hidden="true" className="size-3.5" />
+                  {formatMeetingDate(meeting.meetingDate)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardContent>
     </Card>
   );

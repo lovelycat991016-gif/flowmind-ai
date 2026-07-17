@@ -1,12 +1,4 @@
-import {
-  ArrowRight,
-  History,
-  ListChecks,
-  Upload,
-  type LucideIcon,
-} from "lucide-react";
-
-import type { DashboardQuickAction } from "@/features/dashboard/model/dashboard-mock-data";
+import { ArrowRight, CalendarPlus, History, type LucideIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,16 +7,15 @@ import {
   CardTitle,
 } from "@/shared/ui/card";
 
-const icons: Record<DashboardQuickAction["icon"], LucideIcon> = {
-  upload: Upload,
-  history: History,
-  actions: ListChecks,
+const icons: Record<QuickAction["icon"], LucideIcon> = {
+  create: CalendarPlus, history: History,
 };
+type QuickAction = { id: string; label: string; description: string; href: string; icon: "create" | "history" };
 
 export function QuickActions({
   actions,
 }: {
-  actions: ReadonlyArray<DashboardQuickAction>;
+  actions: ReadonlyArray<QuickAction>;
 }) {
   return (
     <Card id="quick-actions">
