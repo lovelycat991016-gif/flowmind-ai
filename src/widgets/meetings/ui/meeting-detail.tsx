@@ -2,6 +2,9 @@ import { CalendarDays } from "lucide-react";
 import type { MeetingDetail as MeetingDetailModel } from "@/entities/meeting/model/meeting";
 import { formatMeetingDate } from "@/entities/meeting/model/meeting";
 import { RenameMeetingForm } from "@/features/meetings/ui/rename-meeting-form";
+import { archiveMeetingAction } from "@/features/meetings/actions/archive-meeting";
+import { restoreMeetingAction } from "@/features/meetings/actions/restore-meeting";
+import { DeleteMeetingDialog } from "@/features/meetings/ui/delete-meeting-dialog";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -25,8 +28,11 @@ export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
       <Card>
         <CardHeader><CardTitle as="h2">Meeting lifecycle</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-3">
-          <Button type="button" variant="outline">{isArchived ? "Restore meeting" : "Archive meeting"}</Button>
-          <Button className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground" type="button" variant="outline">Delete meeting</Button>
+          <form action={isArchived ? restoreMeetingAction : archiveMeetingAction}>
+            <input name="id" type="hidden" value={meeting.id} />
+            <Button type="submit" variant="outline">{isArchived ? "Restore meeting" : "Archive meeting"}</Button>
+          </form>
+          <DeleteMeetingDialog meetingId={meeting.id} title={meeting.title} />
         </CardContent>
       </Card>
     </div>
