@@ -1,4 +1,5 @@
 import { AudioLines } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 import { primaryNavigation } from "@/widgets/app-shell/model/navigation";
 
@@ -8,6 +9,7 @@ type AppSidebarProps = {
 };
 
 export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
+  const pathname = usePathname();
   return (
     <div className="bg-sidebar text-sidebar-foreground flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center gap-3 border-b border-white/10 px-4 xl:px-5">
@@ -26,6 +28,9 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
       <nav aria-label="Primary" className="flex-1 px-3 py-5">
         <ul className="space-y-1">
           {primaryNavigation.map((item) => {
+            const active = item.href
+              ? pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`))
+              : false;
             const Icon = item.icon;
             const content = (
               <>
@@ -55,7 +60,7 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
             );
             const className = [
               "flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors",
-              item.active
+              active
                 ? "bg-white/12 text-white"
                 : "text-sidebar-muted hover:bg-white/8 hover:text-white",
               item.disabled || item.reserved
@@ -70,7 +75,7 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
               <li key={item.label}>
                 {item.href ? (
                   <a
-                    aria-current={item.active ? "page" : undefined}
+                    aria-current={active ? "page" : undefined}
                     aria-label={item.label}
                     className={className}
                     href={item.href}

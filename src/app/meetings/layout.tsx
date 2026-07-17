@@ -3,6 +3,6 @@ import { AuthenticatedAppShell } from "@/widgets/app-shell/ui/authenticated-app-
 
 export const dynamic = "force-dynamic";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default function MeetingsLayout({ children }: { children: ReactNode }) {
   return <AuthenticatedAppShell>{children}</AuthenticatedAppShell>;
 }

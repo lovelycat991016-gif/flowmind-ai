@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { AppShell } from "./app-shell";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/meetings" }));
 
 function renderShell() {
   return render(
@@ -26,9 +28,13 @@ describe("AppShell", () => {
     expect(navigation).toHaveTextContent("Summaries");
     expect(navigation).toHaveTextContent("Action Items");
     expect(navigation).toHaveTextContent("Settings");
-    expect(
-      screen.getAllByRole("link", { name: "Dashboard" })[0],
-    ).toHaveAttribute("aria-current", "page");
+    expect(screen.getAllByRole("link", { name: "Meetings" })[0]).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getAllByRole("link", { name: "Dashboard" })[0]).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("marks reserved navigation and header utilities unavailable", () => {
