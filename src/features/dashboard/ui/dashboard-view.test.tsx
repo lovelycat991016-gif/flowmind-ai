@@ -58,4 +58,16 @@ describe("DashboardView", () => {
   });
 });
 
-const data = { metrics: { total: 12, active: 8, archived: 4, thisWeek: 3 }, recentMeetings: [{ id: "6b79f5f3-f083-4a75-b74b-41342f2b1454", title: "Product weekly", meetingDate: "2026-07-17T01:30:00.000Z", archivedAt: null, createdAt: "2026-07-17T01:00:00.000Z", updatedAt: "2026-07-17T01:00:00.000Z" }] };
+const data = {
+  metrics: { total: 12, active: 8, archived: 4, thisWeek: 3 },
+  recentMeetings: [
+    {
+      id: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
+      title: "Product weekly",
+      meetingDate: "2026-07-17T01:30:00.000Z",
+      archivedAt: null,
+      createdAt: "2026-07-17T01:00:00.000Z",
+      updatedAt: "2026-07-17T01:00:00.000Z",
+    },
+  ],
+};

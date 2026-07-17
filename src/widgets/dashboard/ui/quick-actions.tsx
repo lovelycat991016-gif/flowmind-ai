@@ -1,4 +1,9 @@
-import { ArrowRight, CalendarPlus, History, type LucideIcon } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarPlus,
+  History,
+  type LucideIcon,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -8,9 +13,16 @@ import {
 } from "@/shared/ui/card";
 
 const icons: Record<QuickAction["icon"], LucideIcon> = {
-  create: CalendarPlus, history: History,
+  create: CalendarPlus,
+  history: History,
 };
-type QuickAction = { id: string; label: string; description: string; href: string; icon: "create" | "history" };
+type QuickAction = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+  icon: "create" | "history";
+};
 
 export function QuickActions({
   actions,

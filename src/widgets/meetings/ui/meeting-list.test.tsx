@@ -15,7 +15,12 @@ function meeting(index: number, archived = false): MeetingListItem {
   };
 }
 
-const activeState = { q: "", filter: "active", sort: "date-desc", page: 2 } as const;
+const activeState = {
+  q: "",
+  filter: "active",
+  sort: "date-desc",
+  page: 2,
+} as const;
 
 describe("MeetingList", () => {
   it("renders twenty linked meetings and preserves pagination state", () => {
@@ -56,7 +61,11 @@ describe("MeetingList", () => {
 
   it("distinguishes empty lifecycle and search results", () => {
     const { rerender } = render(
-      <MeetingList hasNextPage={false} meetings={[]} state={{ ...activeState, page: 1 }} />,
+      <MeetingList
+        hasNextPage={false}
+        meetings={[]}
+        state={{ ...activeState, page: 1 }}
+      />,
     );
     expect(screen.getByText("No active meetings yet")).toBeVisible();
 

@@ -29,7 +29,9 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
         <ul className="space-y-1">
           {primaryNavigation.map((item) => {
             const active = item.href
-              ? pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`))
+              ? pathname === item.href ||
+                (item.href !== "/dashboard" &&
+                  pathname.startsWith(`${item.href}/`))
               : false;
             const Icon = item.icon;
             const content = (

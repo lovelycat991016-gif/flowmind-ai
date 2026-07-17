@@ -30,6 +30,19 @@ Sprint 2 adds the approved Calm Workspace dashboard experience:
 
 Meeting CRUD, uploads, transcription, summaries, action item persistence, and all backend integration remain outside Sprint 2.
 
+## Sprint 3
+
+Sprint 3 delivers the owner-isolated Meeting Management MVP:
+
+- PostgreSQL `meetings` migration with title constraints, `updated_at` trigger, indexes, and authenticated RLS policies
+- Server Component reads for meeting list, detail, and live dashboard data
+- Server Actions for create, rename, archive, restore, and permanent delete
+- URL-driven title search, active/archived filtering, four sort modes, and 20-row pagination using a 21-row query
+- Responsive create, list, detail, loading, error, empty, and non-disclosing not-found states
+- Dashboard metrics for total, active, archived, and this-week meetings, plus latest active meetings
+
+No API routes, audio upload, transcription, AI processing, action items, team workspaces, or future dependent tables are introduced.
+
 ## Technology
 
 - Next.js 15 and React 19
@@ -47,14 +60,16 @@ src/
 |-- entities/meeting/            # Meeting types and status presentation
 |-- features/
 |   |-- auth/                    # Authentication actions, policies, schemas, and UI
-|   `-- dashboard/               # Dashboard composition and local mock adapter
+|   |-- dashboard/               # Query-driven dashboard composition
+|   `-- meetings/                # Server actions, queries, schemas, and meeting UI
 |-- shared/
 |   |-- config/                  # Validated public environment configuration
 |   |-- lib/supabase/            # Browser, server, and middleware Supabase adapters
 |   `-- ui/                      # Reusable shadcn-style UI primitives
 `-- widgets/
     |-- app-shell/               # Responsive sidebar, header, drawer, and navigation model
-    `-- dashboard/               # Welcome, statistics, meetings, and quick-action widgets
+    |-- dashboard/               # Query-driven dashboard widgets
+    `-- meetings/                # Meeting list and detail compositions
 supabase/
 `-- migrations/                 # PostgreSQL schema and RLS migrations
 docs/
@@ -88,7 +103,7 @@ docs/
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
    ```
 
-3. Apply `supabase/migrations/202607140001_create_profiles.sql` through the Supabase CLI or SQL editor.
+3. Apply `supabase/migrations/202607140001_create_profiles.sql` and `supabase/migrations/202607160001_create_meetings.sql` through the Supabase CLI or SQL editor.
 
 4. In Supabase Auth URL configuration, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/callback` as a redirect URL.
 
@@ -120,11 +135,13 @@ Authentication sessions are stored in secure Supabase-managed cookies. Middlewar
 
 The `profiles` table references `auth.users` one-to-one. A database trigger provisions each profile, and RLS restricts authenticated users to selecting and updating their own profile.
 
-## Dashboard UI Architecture
+## Meeting Architecture
 
-`src/app/dashboard/layout.tsx` owns the authenticated application shell. `DashboardView` remains a pure UI composition that consumes typed mock contracts from `features/dashboard/model`; shared primitives do not depend on dashboard or meeting domains.
+`src/app/dashboard/layout.tsx` and `src/app/meetings/layout.tsx` use the authenticated application shell. Meeting reads live in `features/meetings/queries` and run from Server Components; mutations live in `features/meetings/actions` as Server Actions. `features/meetings/schemas` owns Zod input validation and URL list-state normalization.
 
-Future integration should replace the mock adapter with server-side meeting queries, connect quick actions to upload and meeting routes, derive the welcome identity from the user profile, and map live processing states into the existing status and loading components. These points are intentionally isolated from the Sprint 2 presentation layer.
+The `meetings` table is the dashboard source of truth. Database constraints and RLS enforce the final ownership boundary; inaccessible detail rows return the same not-found route as missing rows. The browser never performs direct Supabase CRUD.
+
+Future recordings, transcripts, summaries, action items, and storage objects must reference a meeting only after a deletion policy is chosen. Before shipping those dependencies, decide whether permanent meeting deletion cascades, is restricted, or runs a cleanup workflow. Sprint 3 only cascades from `auth.users` to `meetings` and deliberately creates none of those dependent artifacts.
 
 ## Dashboard Screenshots
 
@@ -133,6 +150,8 @@ Future integration should replace the mock adapter with server-side meeting quer
 - Mobile: `docs/screenshots/sprint-2/dashboard-mobile.png`
 
 Detailed responsive and accessibility results are recorded in `docs/qa/sprint-2-dashboard-qa.md`.
+
+Sprint 3 validation notes, including the pending browser screenshot limitation, are recorded in `docs/qa/sprint-3-meeting-management-qa.md`.
 
 ## Verification
 

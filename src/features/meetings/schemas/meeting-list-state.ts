@@ -1,5 +1,10 @@
 export const meetingFilters = ["active", "archived"] as const;
-export const meetingSorts = ["date-desc", "date-asc", "title-asc", "title-desc"] as const;
+export const meetingSorts = [
+  "date-desc",
+  "date-asc",
+  "title-asc",
+  "title-desc",
+] as const;
 
 export type MeetingFilter = (typeof meetingFilters)[number];
 export type MeetingSort = (typeof meetingSorts)[number];
@@ -24,11 +29,16 @@ function scalar(value: string | string[] | undefined) {
   return typeof value === "string" ? value : undefined;
 }
 
-function isOneOf<const T extends readonly string[]>(value: string | undefined, values: T): value is T[number] {
+function isOneOf<const T extends readonly string[]>(
+  value: string | undefined,
+  values: T,
+): value is T[number] {
   return typeof value === "string" && values.includes(value);
 }
 
-export function parseMeetingListState(params: MeetingSearchParams): MeetingListState {
+export function parseMeetingListState(
+  params: MeetingSearchParams,
+): MeetingListState {
   const filter = scalar(params.filter);
   const sort = scalar(params.sort);
   const rawPage = scalar(params.page);
@@ -44,12 +54,18 @@ export function parseMeetingListState(params: MeetingSearchParams): MeetingListS
 
 type MeetingListChange = Partial<MeetingListState>;
 
-export function buildMeetingListHref(state: MeetingListState, change: MeetingListChange) {
+export function buildMeetingListHref(
+  state: MeetingListState,
+  change: MeetingListChange,
+) {
   const resetsPage = "q" in change || "filter" in change || "sort" in change;
   const next = parseMeetingListState({
     ...state,
     ...change,
-    page: resetsPage && !("page" in change) ? "1" : String(change.page ?? state.page),
+    page:
+      resetsPage && !("page" in change)
+        ? "1"
+        : String(change.page ?? state.page),
   });
   const params = new URLSearchParams();
 

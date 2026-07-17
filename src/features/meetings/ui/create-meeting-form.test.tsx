@@ -13,8 +13,12 @@ describe("CreateMeetingForm", () => {
 
     expect(screen.getByRole("textbox", { name: "Title" })).toBeRequired();
     expect(screen.getByLabelText("Meeting date and time")).toBeRequired();
-    expect(document.querySelector('input[name="timezoneOffset"]')).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Create meeting" })).toBeEnabled();
+    expect(
+      document.querySelector('input[name="timezoneOffset"]'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create meeting" }),
+    ).toBeEnabled();
   });
 
   it("renders preserved values and accessible field errors", () => {
@@ -30,7 +34,11 @@ describe("CreateMeetingForm", () => {
     );
 
     expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("  ");
-    expect(screen.getByLabelText("Meeting date and time")).toHaveValue("2026-07-17T09:30");
-    expect(screen.getByRole("alert")).toHaveTextContent("Enter a meeting title.");
+    expect(screen.getByLabelText("Meeting date and time")).toHaveValue(
+      "2026-07-17T09:30",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a meeting title.",
+    );
   });
 });

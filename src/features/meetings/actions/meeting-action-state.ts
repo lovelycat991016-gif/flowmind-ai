@@ -12,11 +12,16 @@ export const INITIAL_MEETING_ACTION_STATE: MeetingActionState = {
   values: { title: "", meetingDateLocal: "" },
 };
 
-export function firstFieldErrors(issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>) {
+export function firstFieldErrors(
+  issues: ReadonlyArray<{ path: PropertyKey[]; message: string }>,
+) {
   const fieldErrors: MeetingActionState["fieldErrors"] = {};
   for (const issue of issues) {
     const field = issue.path[0];
-    if ((field === "title" || field === "meetingDateLocal") && !fieldErrors[field]) {
+    if (
+      (field === "title" || field === "meetingDateLocal") &&
+      !fieldErrors[field]
+    ) {
       fieldErrors[field] = issue.message;
     }
   }

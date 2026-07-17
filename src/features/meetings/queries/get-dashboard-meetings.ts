@@ -1,4 +1,7 @@
-import type { DashboardMeetingData, MeetingRow } from "@/entities/meeting/model/meeting";
+import type {
+  DashboardMeetingData,
+  MeetingRow,
+} from "@/entities/meeting/model/meeting";
 import { mapMeetingRow } from "@/entities/meeting/model/meeting";
 import { createClient } from "@/shared/lib/supabase/server";
 
@@ -9,13 +12,19 @@ function startOfUtcWeek(now: Date) {
   const day = now.getUTCDay();
   const daysSinceMonday = day === 0 ? 6 : day - 1;
   return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceMonday),
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - daysSinceMonday,
+    ),
   ).toISOString();
 }
 
 export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
   const supabase = await createClient();
-  const totalQuery = supabase.from("meetings").select("id", { count: "exact", head: true });
+  const totalQuery = supabase
+    .from("meetings")
+    .select("id", { count: "exact", head: true });
   const activeQuery = supabase
     .from("meetings")
     .select("id", { count: "exact", head: true })
@@ -45,7 +54,13 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
     recentQuery,
   ]);
 
-  if (total.error || active.error || archived.error || thisWeek.error || recent.error) {
+  if (
+    total.error ||
+    active.error ||
+    archived.error ||
+    thisWeek.error ||
+    recent.error
+  ) {
     throw new Error("Unable to load dashboard meeting data.");
   }
 

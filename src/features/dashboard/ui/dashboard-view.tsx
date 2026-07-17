@@ -4,14 +4,59 @@ import { RecentMeetings } from "@/widgets/dashboard/ui/recent-meetings";
 import { StatisticCard } from "@/widgets/dashboard/ui/statistic-card";
 import { WelcomeBanner } from "@/widgets/dashboard/ui/welcome-banner";
 
-export function DashboardView({ userName, data }: { userName: string; data: DashboardMeetingData }) {
+export function DashboardView({
+  userName,
+  data,
+}: {
+  userName: string;
+  data: DashboardMeetingData;
+}) {
   const statistics = [
-    { id: "total", label: "Total meetings", value: data.metrics.total, context: "All meetings", icon: "total" as const },
-    { id: "active", label: "Active meetings", value: data.metrics.active, context: "Available now", icon: "active" as const },
-    { id: "archived", label: "Archived meetings", value: data.metrics.archived, context: "Stored for reference", icon: "archived" as const },
-    { id: "week", label: "Meetings this week", value: data.metrics.thisWeek, context: "Active meetings since Monday", icon: "week" as const },
+    {
+      id: "total",
+      label: "Total meetings",
+      value: data.metrics.total,
+      context: "All meetings",
+      icon: "total" as const,
+    },
+    {
+      id: "active",
+      label: "Active meetings",
+      value: data.metrics.active,
+      context: "Available now",
+      icon: "active" as const,
+    },
+    {
+      id: "archived",
+      label: "Archived meetings",
+      value: data.metrics.archived,
+      context: "Stored for reference",
+      icon: "archived" as const,
+    },
+    {
+      id: "week",
+      label: "Meetings this week",
+      value: data.metrics.thisWeek,
+      context: "Active meetings since Monday",
+      icon: "week" as const,
+    },
   ];
-  const actions = [{ id: "new", label: "New meeting", description: "Add a meeting to your workspace", href: "/meetings/new", icon: "create" as const }, { id: "all", label: "View meetings", description: "Search and manage meeting history", href: "/meetings", icon: "history" as const }];
+  const actions = [
+    {
+      id: "new",
+      label: "New meeting",
+      description: "Add a meeting to your workspace",
+      href: "/meetings/new",
+      icon: "create" as const,
+    },
+    {
+      id: "all",
+      label: "View meetings",
+      description: "Search and manage meeting history",
+      href: "/meetings",
+      icon: "history" as const,
+    },
+  ];
   return (
     <div
       className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10"

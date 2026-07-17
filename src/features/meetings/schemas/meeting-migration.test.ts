@@ -49,14 +49,18 @@ describe("meetings migration", () => {
     expect(migration).toContain(
       "grant select, insert, update, delete on table public.meetings to authenticated",
     );
-    expect(migration).toContain("revoke all on table public.meetings from anon");
+    expect(migration).toContain(
+      "revoke all on table public.meetings from anon",
+    );
   });
 
   it("adds query indexes and automatic updated_at maintenance", () => {
     const migration = readMigration();
 
     expect(migration).toContain("create extension if not exists pg_trgm");
-    expect(migration.match(/create index meetings_/g)?.length).toBeGreaterThanOrEqual(5);
+    expect(
+      migration.match(/create index meetings_/g)?.length,
+    ).toBeGreaterThanOrEqual(5);
     expect(migration).toContain("where archived_at is null");
     expect(migration).toContain("where archived_at is not null");
     expect(migration).toContain("using gin (title extensions.gin_trgm_ops)");

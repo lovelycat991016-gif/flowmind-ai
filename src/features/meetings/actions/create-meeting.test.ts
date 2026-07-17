@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("@/shared/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/shared/lib/supabase/server", () => ({
+  createClient: mocks.createClient,
+}));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
@@ -44,7 +46,9 @@ describe("createMeetingAction", () => {
     const select = vi.fn().mockReturnValue({ single });
     const insert = vi.fn().mockReturnValue({ select });
     mocks.createClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }) },
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }),
+      },
       from: vi.fn().mockReturnValue({ insert }),
     });
 
@@ -70,11 +74,16 @@ describe("createMeetingAction", () => {
 
   it("returns a generic error without exposing Supabase details", async () => {
     mocks.createClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }) },
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }),
+      },
       from: vi.fn().mockReturnValue({
         insert: vi.fn().mockReturnValue({
           select: vi.fn().mockReturnValue({
-            single: vi.fn().mockResolvedValue({ data: null, error: { message: "secret detail" } }),
+            single: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: "secret detail" },
+            }),
           }),
         }),
       }),
@@ -82,7 +91,11 @@ describe("createMeetingAction", () => {
 
     const state = await createMeetingAction(
       INITIAL_MEETING_ACTION_STATE,
-      form({ title: "Planning", meetingDateLocal: "2026-07-17T09:30", timezoneOffset: "0" }),
+      form({
+        title: "Planning",
+        meetingDateLocal: "2026-07-17T09:30",
+        timezoneOffset: "0",
+      }),
     );
 
     expect(state.message).toBe("We couldn't create this meeting. Try again.");

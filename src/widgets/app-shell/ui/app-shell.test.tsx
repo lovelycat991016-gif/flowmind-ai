@@ -28,13 +28,12 @@ describe("AppShell", () => {
     expect(navigation).toHaveTextContent("Summaries");
     expect(navigation).toHaveTextContent("Action Items");
     expect(navigation).toHaveTextContent("Settings");
-    expect(screen.getAllByRole("link", { name: "Meetings" })[0]).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(screen.getAllByRole("link", { name: "Dashboard" })[0]).not.toHaveAttribute(
-      "aria-current",
-    );
+    expect(
+      screen.getAllByRole("link", { name: "Meetings" })[0],
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      screen.getAllByRole("link", { name: "Dashboard" })[0],
+    ).not.toHaveAttribute("aria-current");
   });
 
   it("marks reserved navigation and header utilities unavailable", () => {

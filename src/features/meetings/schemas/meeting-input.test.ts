@@ -9,7 +9,9 @@ import {
 
 describe("meeting input schemas", () => {
   it("trims and validates meeting titles", () => {
-    expect(meetingTitleSchema.parse("  Product weekly  ")).toBe("Product weekly");
+    expect(meetingTitleSchema.parse("  Product weekly  ")).toBe(
+      "Product weekly",
+    );
     expect(meetingTitleSchema.safeParse("   ").success).toBe(false);
     expect(meetingTitleSchema.safeParse("x".repeat(201)).success).toBe(false);
   });

@@ -30,7 +30,9 @@ export async function createMeetingAction(
   }
 
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data, error } = await supabase
@@ -39,7 +41,12 @@ export async function createMeetingAction(
     .select("id")
     .single();
   if (error || !data) {
-    return { status: "error", message: "We couldn't create this meeting. Try again.", fieldErrors: {}, values };
+    return {
+      status: "error",
+      message: "We couldn't create this meeting. Try again.",
+      fieldErrors: {},
+      values,
+    };
   }
 
   revalidatePath("/meetings");

@@ -11,7 +11,10 @@ export const meetingIdSchema = z.uuid("The meeting identifier is invalid.");
 const localDateSchema = z
   .string()
   .min(1, "Choose a meeting date and time.")
-  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Choose a valid meeting date and time.");
+  .regex(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
+    "Choose a valid meeting date and time.",
+  );
 
 const timezoneOffsetSchema = z.coerce.number().int().min(-840).max(840);
 

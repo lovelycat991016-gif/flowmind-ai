@@ -6,7 +6,11 @@ import { MeetingDetail } from "@/widgets/meetings/ui/meeting-detail";
 
 export const metadata: Metadata = { title: "Meeting" };
 
-export default async function MeetingDetailPage({ params }: { params: Promise<{ meetingId: string }> }) {
+export default async function MeetingDetailPage({
+  params,
+}: {
+  params: Promise<{ meetingId: string }>;
+}) {
   const { meetingId } = await params;
   const parsed = meetingIdSchema.safeParse(meetingId);
   if (!parsed.success) notFound();

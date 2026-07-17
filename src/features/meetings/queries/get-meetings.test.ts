@@ -18,7 +18,7 @@ const row = {
 };
 
 type QueryResult = {
-  data: typeof row[] | null;
+  data: (typeof row)[] | null;
   error: { message: string } | null;
 };
 
@@ -46,20 +46,34 @@ beforeEach(() => {
 describe("meeting queries", () => {
   it("builds an active newest-first 21-row query", async () => {
     const query = listQuery();
-    createClientMock.mockResolvedValue({ from: vi.fn().mockReturnValue(query) });
+    createClientMock.mockResolvedValue({
+      from: vi.fn().mockReturnValue(query),
+    });
 
-    const page = await getMeetingsPage({ q: "", filter: "active", sort: "date-desc", page: 1 });
+    const page = await getMeetingsPage({
+      q: "",
+      filter: "active",
+      sort: "date-desc",
+      page: 1,
+    });
 
     expect(query.is).toHaveBeenCalledWith("archived_at", null);
-    expect(query.order).toHaveBeenNthCalledWith(1, "meeting_date", { ascending: false });
+    expect(query.order).toHaveBeenNthCalledWith(1, "meeting_date", {
+      ascending: false,
+    });
     expect(query.order).toHaveBeenNthCalledWith(2, "id", { ascending: false });
     expect(query.range).toHaveBeenCalledWith(0, 20);
-    expect(page.meetings[0]).toMatchObject({ title: "Product weekly", archivedAt: null });
+    expect(page.meetings[0]).toMatchObject({
+      title: "Product weekly",
+      archivedAt: null,
+    });
   });
 
   it("builds an archived title search and escapes wildcard characters", async () => {
     const query = listQuery();
-    createClientMock.mockResolvedValue({ from: vi.fn().mockReturnValue(query) });
+    createClientMock.mockResolvedValue({
+      from: vi.fn().mockReturnValue(query),
+    });
 
     await getMeetingsPage({
       q: "50%_plan",
@@ -70,7 +84,9 @@ describe("meeting queries", () => {
 
     expect(query.not).toHaveBeenCalledWith("archived_at", "is", null);
     expect(query.ilike).toHaveBeenCalledWith("title", "%50\\%\\_plan%");
-    expect(query.order).toHaveBeenNthCalledWith(1, "title", { ascending: true });
+    expect(query.order).toHaveBeenNthCalledWith(1, "title", {
+      ascending: true,
+    });
     expect(query.range).toHaveBeenCalledWith(20, 40);
   });
 
@@ -83,15 +99,22 @@ describe("meeting queries", () => {
     };
     query.select.mockReturnValue(query);
     query.eq.mockReturnValue(query);
-    createClientMock.mockResolvedValue({ from: vi.fn().mockReturnValue(query) });
+    createClientMock.mockResolvedValue({
+      from: vi.fn().mockReturnValue(query),
+    });
 
     await expect(getMeetingById(row.id)).resolves.toBeNull();
     expect(query.eq).toHaveBeenCalledWith("id", row.id);
   });
 
   it("throws a safe error when Supabase rejects a query", async () => {
-    const query = listQuery({ data: null, error: { message: "database details" } });
-    createClientMock.mockResolvedValue({ from: vi.fn().mockReturnValue(query) });
+    const query = listQuery({
+      data: null,
+      error: { message: "database details" },
+    });
+    createClientMock.mockResolvedValue({
+      from: vi.fn().mockReturnValue(query),
+    });
 
     await expect(
       getMeetingsPage({ q: "", filter: "active", sort: "date-desc", page: 1 }),

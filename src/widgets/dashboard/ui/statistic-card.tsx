@@ -1,16 +1,27 @@
-import { CalendarDays, Archive, CalendarRange, Layers3, type LucideIcon } from "lucide-react";
+import {
+  CalendarDays,
+  Archive,
+  CalendarRange,
+  Layers3,
+  type LucideIcon,
+} from "lucide-react";
 import { Card, CardContent } from "@/shared/ui/card";
 
-type Statistic = { id: string; label: string; value: number; context: string; icon: "total" | "active" | "archived" | "week" };
+type Statistic = {
+  id: string;
+  label: string;
+  value: number;
+  context: string;
+  icon: "total" | "active" | "archived" | "week";
+};
 const icons: Record<Statistic["icon"], LucideIcon> = {
-  total: Layers3, active: CalendarDays, archived: Archive, week: CalendarRange,
+  total: Layers3,
+  active: CalendarDays,
+  archived: Archive,
+  week: CalendarRange,
 };
 
-export function StatisticCard({
-  statistic,
-}: {
-  statistic: Statistic;
-}) {
+export function StatisticCard({ statistic }: { statistic: Statistic }) {
   const Icon = icons[statistic.icon];
 
   return (
@@ -19,9 +30,7 @@ export function StatisticCard({
       id={statistic.id === "open-actions" ? "open-action-items" : undefined}
     >
       <CardContent className="flex min-h-36 flex-col justify-between p-5">
-        <div
-          className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-md"
-        >
+        <div className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-md">
           <Icon aria-hidden="true" className="size-4" />
         </div>
         <div className="mt-5">

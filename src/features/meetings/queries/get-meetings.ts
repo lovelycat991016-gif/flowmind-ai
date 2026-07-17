@@ -1,6 +1,12 @@
-import type { MeetingDetail, MeetingRow } from "@/entities/meeting/model/meeting";
+import type {
+  MeetingDetail,
+  MeetingRow,
+} from "@/entities/meeting/model/meeting";
 import { mapMeetingRow } from "@/entities/meeting/model/meeting";
-import { createMeetingQueryPlan, toMeetingPage } from "@/features/meetings/queries/meeting-query-plan";
+import {
+  createMeetingQueryPlan,
+  toMeetingPage,
+} from "@/features/meetings/queries/meeting-query-plan";
 import type { MeetingListState } from "@/features/meetings/schemas/meeting-list-state";
 import { createClient } from "@/shared/lib/supabase/server";
 
@@ -34,7 +40,9 @@ export async function getMeetingsPage(state: MeetingListState) {
   return toMeetingPage(((data ?? []) as MeetingRow[]).map(mapMeetingRow));
 }
 
-export async function getMeetingById(id: string): Promise<MeetingDetail | null> {
+export async function getMeetingById(
+  id: string,
+): Promise<MeetingDetail | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("meetings")

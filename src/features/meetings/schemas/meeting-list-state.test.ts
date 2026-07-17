@@ -16,8 +16,15 @@ describe("meeting list state", () => {
   });
 
   it("accepts every approved filter and sort mode", () => {
-    for (const sort of ["date-desc", "date-asc", "title-asc", "title-desc"] as const) {
-      expect(parseMeetingListState({ filter: "archived", sort, page: "2" })).toEqual({
+    for (const sort of [
+      "date-desc",
+      "date-asc",
+      "title-asc",
+      "title-desc",
+    ] as const) {
+      expect(
+        parseMeetingListState({ filter: "archived", sort, page: "2" }),
+      ).toEqual({
         q: "",
         filter: "archived",
         sort,
@@ -47,10 +54,21 @@ describe("meeting list state", () => {
   });
 
   it("resets pagination for search, filter, and sort changes", () => {
-    const state = { q: "weekly", filter: "active", sort: "date-desc", page: 4 } as const;
+    const state = {
+      q: "weekly",
+      filter: "active",
+      sort: "date-desc",
+      page: 4,
+    } as const;
 
-    expect(buildMeetingListHref(state, { q: "planning" })).not.toContain("page=4");
-    expect(buildMeetingListHref(state, { filter: "archived" })).not.toContain("page=4");
-    expect(buildMeetingListHref(state, { sort: "title-desc" })).not.toContain("page=4");
+    expect(buildMeetingListHref(state, { q: "planning" })).not.toContain(
+      "page=4",
+    );
+    expect(buildMeetingListHref(state, { filter: "archived" })).not.toContain(
+      "page=4",
+    );
+    expect(buildMeetingListHref(state, { sort: "title-desc" })).not.toContain(
+      "page=4",
+    );
   });
 });

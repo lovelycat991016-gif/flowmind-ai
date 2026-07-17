@@ -1,4 +1,5 @@
 import { ArrowRight, CalendarPlus } from "lucide-react";
+import Link from "next/link";
 
 import { buttonVariants } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
@@ -25,20 +26,20 @@ export function WelcomeBanner({ userName }: { userName: string }) {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <a
+        <Link
           className={cn(buttonVariants({ size: "lg" }), "min-w-40")}
           href="/meetings/new"
         >
           <CalendarPlus aria-hidden="true" className="size-4" />
           New meeting
-        </a>
-        <a
+        </Link>
+        <Link
           className={buttonVariants({ size: "lg", variant: "outline" })}
           href="/meetings"
         >
           View meetings
           <ArrowRight aria-hidden="true" className="size-4" />
-        </a>
+        </Link>
       </div>
     </section>
   );

@@ -6,7 +6,9 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
 }));
 
-vi.mock("@/shared/lib/supabase/server", () => ({ createClient: mocks.createClient }));
+vi.mock("@/shared/lib/supabase/server", () => ({
+  createClient: mocks.createClient,
+}));
 vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
@@ -35,12 +37,16 @@ describe("renameMeetingAction", () => {
   });
 
   it("updates only the validated title and revalidates meeting views", async () => {
-    const single = vi.fn().mockResolvedValue({ data: { id: meetingId }, error: null });
+    const single = vi
+      .fn()
+      .mockResolvedValue({ data: { id: meetingId }, error: null });
     const select = vi.fn().mockReturnValue({ single });
     const eq = vi.fn().mockReturnValue({ select });
     const update = vi.fn().mockReturnValue({ eq });
     mocks.createClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }) },
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }),
+      },
       from: vi.fn().mockReturnValue({ update }),
     });
 
@@ -62,11 +68,18 @@ describe("renameMeetingAction", () => {
     const select = vi.fn().mockReturnValue({ single });
     const eq = vi.fn().mockReturnValue({ select });
     mocks.createClient.mockResolvedValue({
-      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }) },
-      from: vi.fn().mockReturnValue({ update: vi.fn().mockReturnValue({ eq }) }),
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }),
+      },
+      from: vi
+        .fn()
+        .mockReturnValue({ update: vi.fn().mockReturnValue({ eq }) }),
     });
 
-    await renameMeetingAction(INITIAL_MEETING_ACTION_STATE, form({ id: meetingId, title: "Review" }));
+    await renameMeetingAction(
+      INITIAL_MEETING_ACTION_STATE,
+      form({ id: meetingId, title: "Review" }),
+    );
 
     expect(mocks.notFound).toHaveBeenCalledOnce();
   });

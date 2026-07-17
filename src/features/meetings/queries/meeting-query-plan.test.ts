@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import type { MeetingListItem } from "@/entities/meeting/model/meeting";
 import { createMeetingQueryPlan, toMeetingPage } from "./meeting-query-plan";
 
-const defaultState = { q: "", filter: "active", sort: "date-desc", page: 1 } as const;
+const defaultState = {
+  q: "",
+  filter: "active",
+  sort: "date-desc",
+  page: 1,
+} as const;
 
 function makeMeeting(index: number): MeetingListItem {
   return {
@@ -29,11 +34,15 @@ describe("meeting query plan", () => {
   });
 
   it("maps all sort modes and page offsets", () => {
-    expect(createMeetingQueryPlan({ ...defaultState, sort: "date-asc" })).toMatchObject({
+    expect(
+      createMeetingQueryPlan({ ...defaultState, sort: "date-asc" }),
+    ).toMatchObject({
       orderColumn: "meeting_date",
       ascending: true,
     });
-    expect(createMeetingQueryPlan({ ...defaultState, sort: "title-asc" })).toMatchObject({
+    expect(
+      createMeetingQueryPlan({ ...defaultState, sort: "title-asc" }),
+    ).toMatchObject({
       orderColumn: "title",
       ascending: true,
     });
@@ -55,14 +64,20 @@ describe("meeting query plan", () => {
   });
 
   it("returns twenty rows and a next-page signal", () => {
-    const page = toMeetingPage(Array.from({ length: 21 }, (_, index) => makeMeeting(index)));
+    const page = toMeetingPage(
+      Array.from({ length: 21 }, (_, index) => makeMeeting(index)),
+    );
 
     expect(page.meetings).toHaveLength(20);
     expect(page.hasNextPage).toBe(true);
   });
 
   it("does not report a next page for twenty or fewer rows", () => {
-    expect(toMeetingPage(Array.from({ length: 20 }, (_, index) => makeMeeting(index)))).toMatchObject({
+    expect(
+      toMeetingPage(
+        Array.from({ length: 20 }, (_, index) => makeMeeting(index)),
+      ),
+    ).toMatchObject({
       hasNextPage: false,
     });
   });

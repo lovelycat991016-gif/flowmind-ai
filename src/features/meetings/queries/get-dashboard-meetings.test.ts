@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 const { createClientMock } = vi.hoisted(() => ({ createClientMock: vi.fn() }));
 
@@ -65,11 +65,22 @@ it("derives dashboard metrics and recent meetings from meetings queries", async 
 
   const result = await getDashboardMeetingData();
 
-  expect(total.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+  expect(total.select).toHaveBeenCalledWith("id", {
+    count: "exact",
+    head: true,
+  });
   expect(active.is).toHaveBeenCalledWith("archived_at", null);
   expect(archived.not).toHaveBeenCalledWith("archived_at", "is", null);
-  expect(thisWeek.gte).toHaveBeenCalledWith("meeting_date", "2026-07-13T00:00:00.000Z");
+  expect(thisWeek.gte).toHaveBeenCalledWith(
+    "meeting_date",
+    "2026-07-13T00:00:00.000Z",
+  );
   expect(recent.limit).toHaveBeenCalledWith(4);
-  expect(result.metrics).toEqual({ total: 12, active: 8, archived: 4, thisWeek: 3 });
+  expect(result.metrics).toEqual({
+    total: 12,
+    active: 8,
+    archived: 4,
+    thisWeek: 3,
+  });
   expect(result.recentMeetings[0]?.title).toBe("Product weekly");
 });

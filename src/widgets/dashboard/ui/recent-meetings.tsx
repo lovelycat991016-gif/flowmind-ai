@@ -45,7 +45,9 @@ export function RecentMeetings({
                 <span className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-md">
                   <Video aria-hidden="true" className="size-4" />
                 </span>
-                <p className="truncate text-sm font-semibold">{meeting.title}</p>
+                <p className="truncate text-sm font-semibold">
+                  {meeting.title}
+                </p>
                 <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
                   <CalendarDays aria-hidden="true" className="size-3.5" />
                   {formatMeetingDate(meeting.meetingDate)}

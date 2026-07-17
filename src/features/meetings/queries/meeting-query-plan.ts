@@ -1,4 +1,7 @@
-import type { MeetingListItem, MeetingPage } from "@/entities/meeting/model/meeting";
+import type {
+  MeetingListItem,
+  MeetingPage,
+} from "@/entities/meeting/model/meeting";
 import type { MeetingListState } from "@/features/meetings/schemas/meeting-list-state";
 
 export const MEETINGS_PAGE_SIZE = 20;
@@ -12,7 +15,9 @@ export type MeetingQueryPlan = {
   to: number;
 };
 
-export function createMeetingQueryPlan(state: MeetingListState): MeetingQueryPlan {
+export function createMeetingQueryPlan(
+  state: MeetingListState,
+): MeetingQueryPlan {
   const titleSort = state.sort.startsWith("title");
   const ascending = state.sort.endsWith("asc");
   const from = (state.page - 1) * MEETINGS_PAGE_SIZE;
@@ -27,7 +32,9 @@ export function createMeetingQueryPlan(state: MeetingListState): MeetingQueryPla
   };
 }
 
-export function toMeetingPage(meetings: ReadonlyArray<MeetingListItem>): MeetingPage {
+export function toMeetingPage(
+  meetings: ReadonlyArray<MeetingListItem>,
+): MeetingPage {
   return {
     meetings: meetings.slice(0, MEETINGS_PAGE_SIZE),
     hasNextPage: meetings.length > MEETINGS_PAGE_SIZE,
