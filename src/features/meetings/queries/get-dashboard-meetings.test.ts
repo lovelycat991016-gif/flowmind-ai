@@ -88,7 +88,10 @@ it("derives dashboard metrics and recent meetings from meetings queries", async 
 
 it("logs the original failing Supabase response in development", async () => {
   vi.stubEnv("NODE_ENV", "development");
-  const error = { code: "42P01", message: 'relation "meetings" does not exist' };
+  const error = {
+    code: "42P01",
+    message: 'relation "meetings" does not exist',
+  };
   const failed = {
     select: vi.fn().mockResolvedValue({ count: null, error }),
   };
@@ -103,16 +106,21 @@ it("logs the original failing Supabase response in development", async () => {
   recent.is.mockReturnValue(recent);
   recent.order.mockReturnValue(recent);
   createClientMock.mockResolvedValue({
-    from: vi.fn()
+    from: vi
+      .fn()
       .mockReturnValueOnce(failed)
       .mockReturnValueOnce(query)
       .mockReturnValueOnce(query)
       .mockReturnValueOnce(query)
       .mockReturnValueOnce(recent),
   });
-  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  const consoleError = vi
+    .spyOn(console, "error")
+    .mockImplementation(() => undefined);
 
-  await expect(getDashboardMeetingData()).rejects.toThrow("Unable to load dashboard meeting data.");
+  await expect(getDashboardMeetingData()).rejects.toThrow(
+    "Unable to load dashboard meeting data.",
+  );
 
   expect(consoleError).toHaveBeenCalledWith(
     "Dashboard meeting query failed.",
