@@ -11,6 +11,7 @@ import { getDashboardMeetingData } from "./get-dashboard-meetings";
 afterEach(() => {
   vi.useRealTimers();
   createClientMock.mockReset();
+  vi.unstubAllEnvs();
 });
 
 function countQuery(count: number) {
@@ -83,4 +84,39 @@ it("derives dashboard metrics and recent meetings from meetings queries", async 
     thisWeek: 3,
   });
   expect(result.recentMeetings[0]?.title).toBe("Product weekly");
+});
+
+it("logs the original failing Supabase response in development", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  const error = { code: "42P01", message: 'relation "meetings" does not exist' };
+  const failed = {
+    select: vi.fn().mockResolvedValue({ count: null, error }),
+  };
+  const query = countQuery(0);
+  const recent = {
+    select: vi.fn(),
+    is: vi.fn(),
+    order: vi.fn(),
+    limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+  };
+  recent.select.mockReturnValue(recent);
+  recent.is.mockReturnValue(recent);
+  recent.order.mockReturnValue(recent);
+  createClientMock.mockResolvedValue({
+    from: vi.fn()
+      .mockReturnValueOnce(failed)
+      .mockReturnValueOnce(query)
+      .mockReturnValueOnce(query)
+      .mockReturnValueOnce(query)
+      .mockReturnValueOnce(recent),
+  });
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  await expect(getDashboardMeetingData()).rejects.toThrow("Unable to load dashboard meeting data.");
+
+  expect(consoleError).toHaveBeenCalledWith(
+    "Dashboard meeting query failed.",
+    expect.objectContaining({ operation: "total", error }),
+  );
+  consoleError.mockRestore();
 });

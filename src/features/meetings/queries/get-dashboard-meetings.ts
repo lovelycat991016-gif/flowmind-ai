@@ -54,6 +54,18 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
     recentQuery,
   ]);
 
+  const queryResults = { total, active, archived, thisWeek, recent };
+  if (process.env.NODE_ENV === "development") {
+    for (const [operation, result] of Object.entries(queryResults)) {
+      if (result.error) {
+        console.error("Dashboard meeting query failed.", {
+          operation,
+          error: result.error,
+        });
+      }
+    }
+  }
+
   if (
     total.error ||
     active.error ||
