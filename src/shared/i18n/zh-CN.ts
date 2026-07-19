@@ -147,6 +147,16 @@ export const zhCN = {
     segmentList: "转录分段",
     archivedReadOnly: "已归档会议中的转录内容仅供查看。",
   },
+  intelligence: {
+    title: "会议智能",
+    summary: "摘要",
+    actionItems: "行动项",
+    decisions: "决策",
+    processing: "正在生成会议智能结果。",
+    unavailable: "会议智能结果暂不可用。",
+    empty: "暂无会议智能结果。",
+    archivedReadOnly: "已归档会议中的智能结果仅供查看。",
+  },
   auth: {
     email: "邮箱地址",
     emailPlaceholder: "name@example.com",

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getProcessingJobForRecording: vi.fn(),
   getRecordingForMeeting: vi.fn(),
   getTranscriptForRecording: vi.fn(),
+  getMeetingIntelligence: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
@@ -22,6 +23,10 @@ vi.mock(
   }),
 );
 vi.mock(
+  "@/features/meeting-intelligence/queries/get-meeting-intelligence",
+  () => ({ getMeetingIntelligence: mocks.getMeetingIntelligence }),
+);
+vi.mock(
   "@/features/transcription/queries/get-transcript-for-recording",
   () => ({
     getTranscriptForRecording: mocks.getTranscriptForRecording,
@@ -29,14 +34,17 @@ vi.mock(
 );
 vi.mock("@/widgets/meetings/ui/meeting-detail", () => ({
   MeetingDetail: ({
+    intelligence,
     processingJob,
     transcript,
   }: {
+    intelligence?: { status: string } | null;
     processingJob?: { status: string } | null;
     transcript?: { id: string } | null;
   }) => (
     <div
       data-processing-status={processingJob?.status ?? "none"}
+      data-intelligence-status={intelligence?.status ?? "none"}
       data-transcript-id={transcript?.id ?? "none"}
       data-testid="processing-status"
     />
@@ -81,6 +89,7 @@ describe("MeetingDetailPage", () => {
     mocks.getTranscriptForRecording.mockResolvedValue({
       id: "f734eca3-8ea2-47ed-9eaa-0c3c4ec0f83f",
     });
+    mocks.getMeetingIntelligence.mockResolvedValue({ status: "completed" });
 
     render(
       await MeetingDetailPage({
@@ -92,6 +101,7 @@ describe("MeetingDetailPage", () => {
       recording.id,
     );
     expect(mocks.getTranscriptForRecording).toHaveBeenCalledWith(recording.id);
+    expect(mocks.getMeetingIntelligence).toHaveBeenCalledWith(meeting.id);
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "queued",
@@ -99,6 +109,10 @@ describe("MeetingDetailPage", () => {
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-transcript-id",
       "f734eca3-8ea2-47ed-9eaa-0c3c4ec0f83f",
+    );
+    expect(screen.getByTestId("processing-status")).toHaveAttribute(
+      "data-intelligence-status",
+      "completed",
     );
   });
 
@@ -113,6 +127,7 @@ describe("MeetingDetailPage", () => {
 
     expect(mocks.getProcessingJobForRecording).not.toHaveBeenCalled();
     expect(mocks.getTranscriptForRecording).not.toHaveBeenCalled();
+    expect(mocks.getMeetingIntelligence).toHaveBeenCalledWith(meeting.id);
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "none",

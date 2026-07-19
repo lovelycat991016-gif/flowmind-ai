@@ -47,15 +47,21 @@ describe("meeting intelligence migration", () => {
   it("constrains owner-linked data and one active intelligence result per meeting", () => {
     const migration = readMigration();
 
-    expect(migration).toContain("references public.meetings (id) on delete cascade");
-    expect(migration).toContain("references public.transcripts (id) on delete cascade");
+    expect(migration).toContain(
+      "references public.meetings (id) on delete cascade",
+    );
+    expect(migration).toContain(
+      "references public.transcripts (id) on delete cascade",
+    );
     expect(migration).toContain("references auth.users (id) on delete cascade");
     expect(migration).toContain("jsonb_typeof(output_metadata) = 'object'");
     expect(migration).toContain(
       "create unique index meeting_intelligence_active_meeting_idx",
     );
     expect(migration).toContain("on public.meeting_intelligence (meeting_id)");
-    expect(migration).toContain("where status in ('queued', 'running', 'completed')");
+    expect(migration).toContain(
+      "where status in ('queued', 'running', 'completed')",
+    );
     expect(migration).toContain(
       "create trigger meeting_intelligence_set_updated_at",
     );

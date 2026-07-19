@@ -16,6 +16,7 @@ describe("Chinese localization", () => {
     expect(zhCN.dashboard).toHaveProperty("quickActions");
     expect(zhCN.dashboard).toHaveProperty("welcomeDescription");
     expect(zhCN.meetings).toHaveProperty("manageHistory");
+    expect(zhCN).toHaveProperty("intelligence");
     expect(zhCN.auth).toHaveProperty("loginDescription");
     expect(zhCN.auth).toHaveProperty("accountConfirmationSent");
   });

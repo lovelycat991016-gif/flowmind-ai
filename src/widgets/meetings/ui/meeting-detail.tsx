@@ -15,17 +15,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { zhCN } from "@/shared/i18n/zh-CN";
 import { MeetingRecordingSection } from "./meeting-recording-section";
 import { TranscriptSection } from "@/features/transcription/ui/transcript-section";
+import { MeetingIntelligenceSection } from "@/features/meeting-intelligence/ui/meeting-intelligence-section";
 
 export function MeetingDetail({
   meeting,
   processingJob = null,
   recording = null,
   transcript = null,
+  intelligence = null,
 }: {
   meeting: MeetingDetailModel;
   processingJob?: ProcessingJob | null;
   recording?: Recording | null;
   transcript?: TranscriptWithSegments | null;
+  intelligence?: Parameters<
+    typeof MeetingIntelligenceSection
+  >[0]["intelligence"];
 }) {
   const isArchived = Boolean(meeting.archivedAt);
   return (
@@ -69,6 +74,10 @@ export function MeetingDetail({
         processingJob={processingJob}
         recording={recording}
         transcript={transcript}
+      />
+      <MeetingIntelligenceSection
+        archived={isArchived}
+        intelligence={intelligence}
       />
       <Card>
         <CardHeader>

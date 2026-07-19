@@ -30,13 +30,13 @@ The worker processes at most one job per invocation. It retains the persisted li
 
 Migration proposal: `202607210001_add_meeting_intelligence.sql`.
 
-| Object | Key fields and constraints |
-| --- | --- |
-| `processing_jobs` | Permit `job_type = 'meeting_intelligence'`; retain one active job per `(recording_id, job_type)` and existing owner/lease semantics. |
-| `meeting_summaries` | `id`, unique `transcript_id`, `meeting_id`, `user_id`, `content`, `prompt_version`, `model`, `created_at`, `updated_at`; nonblank bounded content; owner-only SELECT. |
-| `action_items` | `id`, `summary_id`, `meeting_id`, `user_id`, `content`, nullable `assignee_name`, nullable `due_date`, `source_segment_index`, `created_at`; normalized nonblank content; owner-only SELECT. |
-| `meeting_decisions` | `id`, `summary_id`, `meeting_id`, `user_id`, `content`, nullable `source_segment_index`, `created_at`; nonblank content; owner-only SELECT. |
-| `ai_prompt_versions` | immutable internal registry: `feature`, `version`, `template`, `schema_version`, `active`, timestamps. No authenticated-user write policy. |
+| Object               | Key fields and constraints                                                                                                                                                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `processing_jobs`    | Permit `job_type = 'meeting_intelligence'`; retain one active job per `(recording_id, job_type)` and existing owner/lease semantics.                                                                                      |
+| `meeting_summaries`  | `id`, unique `transcript_id`, `meeting_id`, `user_id`, `content`, `prompt_version`, `model`, `created_at`, `updated_at`; nonblank bounded content; owner-only SELECT.                                                     |
+| `action_items`       | `id`, `summary_id`, `meeting_id`, `user_id`, `content`, nullable `assignee_name`, nullable `due_date`, `source_segment_index`, `created_at`; normalized nonblank content; owner-only SELECT.                              |
+| `meeting_decisions`  | `id`, `summary_id`, `meeting_id`, `user_id`, `content`, nullable `source_segment_index`, `created_at`; nonblank content; owner-only SELECT.                                                                               |
+| `ai_prompt_versions` | immutable internal registry: `feature`, `version`, `template`, `schema_version`, `active`, timestamps. No authenticated-user write policy.                                                                                |
 | `ai_processing_runs` | internal audit: job/transcript IDs, prompt version, model, input/output token counts when provided, status-safe error code, timing, created/completed timestamps. Owner-only SELECT is optional for V1; no client writes. |
 
 The completion RPC verifies the job lease and owner relationship through recording, meeting, and transcript; inserts one run, summary, items, and decisions, then completes the job atomically. Failed RPC writes only a whitelisted safe code.
