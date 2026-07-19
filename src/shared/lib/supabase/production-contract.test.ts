@@ -25,6 +25,7 @@ describe("Supabase production contract", () => {
       "202607200003_add_transcription_execution.sql",
       "202607210001_add_meeting_intelligence.sql",
       "202607210002_add_meeting_intelligence_worker.sql",
+      "202607210003_add_ai_usage_events.sql",
     ]);
   });
 

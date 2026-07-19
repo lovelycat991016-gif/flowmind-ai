@@ -56,6 +56,28 @@ describe("DashboardView", () => {
       within(quickActions).getByRole("link", { name: /查看会议/ }),
     ).toHaveAttribute("href", "/meetings");
   });
+
+  it("shows onboarding only before the user has created a meeting", () => {
+    const { rerender } = render(
+      <DashboardView
+        userName="Alex"
+        data={{
+          metrics: { total: 0, active: 0, archived: 0, thisWeek: 0 },
+          recentMeetings: [],
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "开始使用 FlowMind" }),
+    ).toBeVisible();
+
+    rerender(<DashboardView userName="Alex" data={data} />);
+
+    expect(
+      screen.queryByRole("heading", { level: 2, name: "开始使用 FlowMind" }),
+    ).not.toBeInTheDocument();
+  });
 });
 
 const data = {

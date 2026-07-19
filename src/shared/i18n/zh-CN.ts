@@ -46,6 +46,22 @@ export const zhCN = {
     createToSee: "新建会议后将在此处显示",
     quickActions: "快捷操作",
     quickActionsDescription: "快速前往常用操作。",
+    betaOnboardingTitle: "开始使用 FlowMind",
+    betaOnboardingDescription:
+      "完成以下步骤，即可将会议录音转化为清晰的会议结果。",
+    betaOnboardingSteps: "开始使用步骤",
+    betaOnboardingStepCreateTitle: "新建会议",
+    betaOnboardingStepCreateDescription:
+      "填写会议标题和时间，建立本次会议记录。",
+    betaOnboardingStepUploadTitle: "上传录音",
+    betaOnboardingStepUploadDescription:
+      "上传支持格式的音频文件，单个文件不超过 500MB。",
+    betaOnboardingStepProcessTitle: "等待处理",
+    betaOnboardingStepProcessDescription:
+      "录音会依次生成转录内容与会议智能结果。",
+    betaOnboardingStepReviewTitle: "查看结果",
+    betaOnboardingStepReviewDescription: "回顾转录、摘要、行动项和决策。",
+    betaOnboardingCreate: "创建第一场会议",
   },
   meetings: {
     title: "会议",

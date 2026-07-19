@@ -1,4 +1,5 @@
 import type { DashboardMeetingData } from "@/entities/meeting/model/meeting";
+import { BetaOnboarding } from "@/widgets/dashboard/ui/beta-onboarding";
 import { QuickActions } from "@/widgets/dashboard/ui/quick-actions";
 import { RecentMeetings } from "@/widgets/dashboard/ui/recent-meetings";
 import { StatisticCard } from "@/widgets/dashboard/ui/statistic-card";
@@ -75,6 +76,12 @@ export function DashboardView({
           ))}
         </div>
       </section>
+
+      {data.metrics.total === 0 ? (
+        <div className="mt-6 xl:mt-8">
+          <BetaOnboarding />
+        </div>
+      ) : null}
 
       <div className="mt-6 grid items-start gap-6 xl:mt-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)]">
         <RecentMeetings meetings={data.recentMeetings} />

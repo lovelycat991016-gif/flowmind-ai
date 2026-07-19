@@ -14,6 +14,7 @@ describe("Chinese localization", () => {
 
   it("includes keys for every authenticated and authentication surface", () => {
     expect(zhCN.dashboard).toHaveProperty("quickActions");
+    expect(zhCN.dashboard).toHaveProperty("betaOnboardingTitle");
     expect(zhCN.dashboard).toHaveProperty("welcomeDescription");
     expect(zhCN.meetings).toHaveProperty("manageHistory");
     expect(zhCN).toHaveProperty("intelligence");
