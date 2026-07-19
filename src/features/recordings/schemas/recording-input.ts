@@ -20,11 +20,7 @@ export const recordingUploadMetadataSchema = z.object({
   meetingId: z.uuid(),
   filename: z.string().trim().min(1).max(255),
   mimeType: z.enum(recordingMimeTypes),
-  fileSizeBytes: z
-    .number()
-    .int()
-    .gt(0)
-    .lte(MAX_RECORDING_FILE_SIZE_BYTES),
+  fileSizeBytes: z.number().int().gt(0).lte(MAX_RECORDING_FILE_SIZE_BYTES),
 });
 
 const allowedTransitions: Readonly<
@@ -49,7 +45,7 @@ export const recordingLifecycleTransitionSchema = z
     from: recordingStatusSchema,
     to: recordingStatusSchema,
   })
-  .refine(
-    ({ from, to }) => canTransitionRecordingUploadStatus(from, to),
-    { message: "Invalid recording upload transition.", path: ["to"] },
-  );
+  .refine(({ from, to }) => canTransitionRecordingUploadStatus(from, to), {
+    message: "Invalid recording upload transition.",
+    path: ["to"],
+  });

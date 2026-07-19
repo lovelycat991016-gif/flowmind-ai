@@ -43,6 +43,22 @@ Sprint 3 delivers the owner-isolated Meeting Management MVP:
 
 No API routes, audio upload, transcription, AI processing, action items, team workspaces, or future dependent tables are introduced.
 
+## Sprint 4
+
+Sprint 4 adds the audio upload foundation without processing audio:
+
+- PostgreSQL `recordings` metadata with owner-only RLS and one active recording per meeting
+- Private Supabase Storage `recordings` bucket restricted to each user's object-path prefix
+- Client-side, Server Action, and bucket-level 500 MB file-size enforcement
+- Supported MIME types: MP3, MP4, WAV, and WebM audio
+- Authenticated Server Actions create upload intents, use Supabase Storage SDK-managed short-lived signed upload URLs, finalize verified uploads, and cancel upload attempts
+- Browser uploads bytes directly to Storage, with progress, cancellation, retry, and accessible Chinese status feedback
+- Meeting detail recording states for empty, uploading, uploaded, failed, cancelled, and archived meetings
+
+The recording lifecycle is `pending` to `uploading`, then `uploaded`, `failed`, or `cancelled`. Failed and cancelled attempts remain operational history; retry creates a new upload intent rather than reusing a prior row.
+
+Transcription, AI summaries, action extraction, and all background processing remain deferred.
+
 ## Technology
 
 - Next.js 15 and React 19
@@ -58,10 +74,12 @@ No API routes, audio upload, transcription, AI processing, action items, team wo
 src/
 |-- app/                         # App Router pages, layouts, loading states, and middleware entry
 |-- entities/meeting/            # Meeting types and status presentation
+|-- entities/recording/          # Recording types and presentation helpers
 |-- features/
 |   |-- auth/                    # Authentication actions, policies, schemas, and UI
 |   |-- dashboard/               # Query-driven dashboard composition
-|   `-- meetings/                # Server actions, queries, schemas, and meeting UI
+|   |-- meetings/                # Server actions, queries, schemas, and meeting UI
+|   `-- recordings/              # Recording actions, queries, schemas, and upload UI
 |-- shared/
 |   |-- config/                  # Validated public environment configuration
 |   |-- lib/supabase/            # Browser, server, and middleware Supabase adapters
@@ -103,7 +121,7 @@ docs/
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
    ```
 
-3. Apply `supabase/migrations/202607140001_create_profiles.sql` and `supabase/migrations/202607160001_create_meetings.sql` through the Supabase CLI or SQL editor.
+3. Apply `supabase/migrations/202607140001_create_profiles.sql`, `supabase/migrations/202607160001_create_meetings.sql`, and `supabase/migrations/202607190001_create_recordings.sql` through the Supabase CLI or SQL editor.
 
 4. In Supabase Auth URL configuration, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/callback` as a redirect URL.
 
@@ -143,6 +161,14 @@ The `meetings` table is the dashboard source of truth. Database constraints and 
 
 Future recordings, transcripts, summaries, action items, and storage objects must reference a meeting only after a deletion policy is chosen. Before shipping those dependencies, decide whether permanent meeting deletion cascades, is restricted, or runs a cleanup workflow. Sprint 3 only cascades from `auth.users` to `meetings` and deliberately creates none of those dependent artifacts.
 
+## Audio Upload Architecture
+
+Recording reads use `features/recordings/queries` with the authenticated Supabase server client and existing meeting RLS relationship. Upload mutations remain in `features/recordings/actions`: the server validates metadata and ownership, creates the recording intent, and requests a signed upload URL from the Supabase Storage SDK. The browser receives no service-role credential and uploads bytes directly to the private bucket using that URL.
+
+The `recordings` table and `storage.objects` policies provide the final ownership boundary. A user's Storage path is `{user_id}/{meeting_id}/{recording_id}.{extension}`; public object URLs are not used. Signed upload URL expiration is SDK-managed and cannot be overridden by the application.
+
+Failed or cancelled attempts may leave abandoned private Storage objects. Automated cleanup is intentionally deferred; production operations must periodically review this risk until a separately approved retention/cleanup workflow is implemented.
+
 ## Dashboard Screenshots
 
 - Desktop: `docs/screenshots/sprint-2/dashboard-desktop.png`
@@ -152,6 +178,8 @@ Future recordings, transcripts, summaries, action items, and storage objects mus
 Detailed responsive and accessibility results are recorded in `docs/qa/sprint-2-dashboard-qa.md`.
 
 Sprint 3 validation notes, including the pending browser screenshot limitation, are recorded in `docs/qa/sprint-3-meeting-management-qa.md`.
+
+Sprint 4 upload validation and operational-risk notes are recorded in `docs/qa/sprint-4-audio-upload-qa.md`.
 
 ## Verification
 

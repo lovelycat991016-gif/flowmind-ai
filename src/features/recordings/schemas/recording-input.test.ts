@@ -93,9 +93,9 @@ describe("recording lifecycle transitions", () => {
     ["uploading", "failed"],
     ["uploading", "cancelled"],
   ])("allows %s to %s", (from, to) => {
-    expect(recordingLifecycleTransitionSchema.safeParse({ from, to }).success).toBe(
-      true,
-    );
+    expect(
+      recordingLifecycleTransitionSchema.safeParse({ from, to }).success,
+    ).toBe(true);
   });
 
   it.each([
@@ -104,8 +104,8 @@ describe("recording lifecycle transitions", () => {
     ["failed", "uploading"],
     ["cancelled", "uploading"],
   ])("rejects %s to %s", (from, to) => {
-    expect(recordingLifecycleTransitionSchema.safeParse({ from, to }).success).toBe(
-      false,
-    );
+    expect(
+      recordingLifecycleTransitionSchema.safeParse({ from, to }).success,
+    ).toBe(false);
   });
 });

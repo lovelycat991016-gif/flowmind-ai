@@ -23,10 +23,10 @@ export type Recording = {
   updatedAt: string;
 };
 
-export function isActiveRecordingUploadStatus(
-  status: RecordingUploadStatus,
-) {
-  return status === "pending" || status === "uploading" || status === "uploaded";
+export function isActiveRecordingUploadStatus(status: RecordingUploadStatus) {
+  return (
+    status === "pending" || status === "uploading" || status === "uploaded"
+  );
 }
 
 export function formatRecordingFileSize(bytes: number) {

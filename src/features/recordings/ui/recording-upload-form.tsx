@@ -100,7 +100,9 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
       return;
     }
 
-    const result = await finalizeUpload({ recordingId: intent.data.recordingId });
+    const result = await finalizeUpload({
+      recordingId: intent.data.recordingId,
+    });
     if (result.status === "error") {
       setError(result.message);
       setPhase("failed");
@@ -138,7 +140,9 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
           onChange={onFileChange}
           type="file"
         />
-        <p className="text-muted-foreground text-sm">{zhCN.recordings.fileHelp}</p>
+        <p className="text-muted-foreground text-sm">
+          {zhCN.recordings.fileHelp}
+        </p>
       </div>
 
       {file ? <p className="text-sm font-medium">{file.name.trim()}</p> : null}
@@ -157,7 +161,11 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <Button onClick={() => void cancelCurrentUpload()} type="button" variant="outline">
+          <Button
+            onClick={() => void cancelCurrentUpload()}
+            type="button"
+            variant="outline"
+          >
             {zhCN.recordings.cancelUpload}
           </Button>
         </div>
@@ -175,7 +183,11 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
         </p>
       ) : null}
       {phase === "uploading" ? (
-        <p aria-live="polite" className="text-muted-foreground text-sm" role="status">
+        <p
+          aria-live="polite"
+          className="text-muted-foreground text-sm"
+          role="status"
+        >
           {zhCN.recordings.uploading}
         </p>
       ) : null}
@@ -185,7 +197,11 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
         </p>
       ) : null}
       {phase === "cancelled" ? (
-        <p aria-live="polite" className="text-muted-foreground text-sm" role="status">
+        <p
+          aria-live="polite"
+          className="text-muted-foreground text-sm"
+          role="status"
+        >
           {zhCN.recordings.uploadCancelled}
         </p>
       ) : null}

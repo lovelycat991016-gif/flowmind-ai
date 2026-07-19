@@ -13,7 +13,13 @@ const meetingId = "cfb378e0-88e2-4cbf-946f-a8ca8f6df536";
 
 describe("MeetingRecordingSection", () => {
   it("shows an accessible empty state and upload action without a recording", () => {
-    render(<MeetingRecordingSection archived={false} meetingId={meetingId} recording={null} />);
+    render(
+      <MeetingRecordingSection
+        archived={false}
+        meetingId={meetingId}
+        recording={null}
+      />,
+    );
 
     expect(screen.getByRole("heading", { name: "会议录音" })).toBeVisible();
     expect(screen.getByText("暂无录音")).toBeVisible();
@@ -53,7 +59,13 @@ describe("MeetingRecordingSection", () => {
   });
 
   it("keeps archived meetings read-only when no recording exists", () => {
-    render(<MeetingRecordingSection archived meetingId={meetingId} recording={null} />);
+    render(
+      <MeetingRecordingSection
+        archived
+        meetingId={meetingId}
+        recording={null}
+      />,
+    );
 
     expect(screen.getByText("归档会议暂不支持上传录音。")).toBeVisible();
     expect(screen.queryByLabelText("上传录音表单")).not.toBeInTheDocument();
@@ -81,7 +93,9 @@ describe("MeetingRecordingSection", () => {
       />,
     );
 
-    expect(screen.getByRole("alert")).toHaveTextContent("录音上传失败，请重试。");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "录音上传失败，请重试。",
+    );
     expect(screen.getByLabelText("上传录音表单")).toBeInTheDocument();
   });
 });

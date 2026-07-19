@@ -47,13 +47,18 @@ describe("getRecordingForMeeting", () => {
       from: vi.fn().mockReturnValue(query),
     });
 
-    await expect(getRecordingForMeeting(recordingRow.meeting_id)).resolves.toMatchObject({
+    await expect(
+      getRecordingForMeeting(recordingRow.meeting_id),
+    ).resolves.toMatchObject({
       id: recordingRow.id,
       meetingId: recordingRow.meeting_id,
       originalFilename: recordingRow.original_filename,
       status: "uploaded",
     });
-    expect(query.eq).toHaveBeenCalledWith("meeting_id", recordingRow.meeting_id);
+    expect(query.eq).toHaveBeenCalledWith(
+      "meeting_id",
+      recordingRow.meeting_id,
+    );
   });
 
   it("returns null when no recording exists", async () => {
@@ -62,7 +67,9 @@ describe("getRecordingForMeeting", () => {
       from: vi.fn().mockReturnValue(query),
     });
 
-    await expect(getRecordingForMeeting(recordingRow.meeting_id)).resolves.toBeNull();
+    await expect(
+      getRecordingForMeeting(recordingRow.meeting_id),
+    ).resolves.toBeNull();
   });
 
   it("returns null when another user's recording is RLS-hidden", async () => {
@@ -71,7 +78,9 @@ describe("getRecordingForMeeting", () => {
       from: vi.fn().mockReturnValue(query),
     });
 
-    await expect(getRecordingForMeeting(recordingRow.meeting_id)).resolves.toBeNull();
+    await expect(
+      getRecordingForMeeting(recordingRow.meeting_id),
+    ).resolves.toBeNull();
   });
 
   it("throws a safe error without exposing Supabase details", async () => {
@@ -83,8 +92,8 @@ describe("getRecordingForMeeting", () => {
       from: vi.fn().mockReturnValue(query),
     });
 
-    await expect(getRecordingForMeeting(recordingRow.meeting_id)).rejects.toThrow(
-      "Unable to load recording.",
-    );
+    await expect(
+      getRecordingForMeeting(recordingRow.meeting_id),
+    ).rejects.toThrow("Unable to load recording.");
   });
 });

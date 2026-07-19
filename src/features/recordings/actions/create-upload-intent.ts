@@ -20,19 +20,22 @@ function extensionFor(filename: string, mimeType: string) {
   const extension = filename.split(".").pop()?.toLowerCase();
   if (extension && /^[a-z0-9]{1,10}$/.test(extension)) return extension;
 
-  return {
-    "audio/mpeg": "mp3",
-    "audio/mp4": "mp4",
-    "audio/wav": "wav",
-    "audio/webm": "webm",
-  }[mimeType] ?? "audio";
+  return (
+    {
+      "audio/mpeg": "mp3",
+      "audio/mp4": "mp4",
+      "audio/wav": "wav",
+      "audio/webm": "webm",
+    }[mimeType] ?? "audio"
+  );
 }
 
 export async function createUploadIntent(
   input: unknown,
 ): Promise<RecordingActionResult<UploadIntent>> {
   const parsed = recordingUploadMetadataSchema.safeParse(input);
-  if (!parsed.success) return { status: "error", message: recordingUploadActionError };
+  if (!parsed.success)
+    return { status: "error", message: recordingUploadActionError };
 
   const supabase = await createClient();
   const {
@@ -73,9 +76,10 @@ export async function createUploadIntent(
     return { status: "error", message: recordingUploadActionError };
   }
 
-  const { data: signedUpload, error: signedUploadError } = await supabase.storage
-    .from("recordings")
-    .createSignedUploadUrl(storagePath);
+  const { data: signedUpload, error: signedUploadError } =
+    await supabase.storage
+      .from("recordings")
+      .createSignedUploadUrl(storagePath);
   if (signedUploadError || !signedUpload?.signedUrl) {
     await supabase
       .from("recordings")

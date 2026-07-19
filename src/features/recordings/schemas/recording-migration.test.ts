@@ -40,7 +40,9 @@ describe("recordings migration", () => {
   it("allows historical failures while enforcing one active recording", () => {
     const migration = readMigration();
 
-    expect(migration).toContain("create unique index recordings_active_meeting_idx");
+    expect(migration).toContain(
+      "create unique index recordings_active_meeting_idx",
+    );
     expect(migration).toContain("on public.recordings (meeting_id)");
     expect(migration).toContain(
       "where status in ('pending', 'uploading', 'uploaded')",
@@ -59,7 +61,9 @@ describe("recordings migration", () => {
     expect(migration).toContain("524288000");
     expect(migration).toContain("storage.objects");
     expect(migration).toContain("bucket_id = 'recordings'");
-    expect(migration).toContain("split_part(name, '/', 1) = (select auth.uid())::text");
+    expect(migration).toContain(
+      "split_part(name, '/', 1) = (select auth.uid())::text",
+    );
     expect(migration).toContain("create trigger recordings_set_updated_at");
   });
 });

@@ -17,7 +17,8 @@ export async function cancelUpload(
   input: unknown,
 ): Promise<RecordingActionResult<{ recordingId: string }>> {
   const parsed = recordingIdSchema.safeParse(input);
-  if (!parsed.success) return { status: "error", message: recordingUploadActionError };
+  if (!parsed.success)
+    return { status: "error", message: recordingUploadActionError };
 
   const supabase = await createClient();
   const {

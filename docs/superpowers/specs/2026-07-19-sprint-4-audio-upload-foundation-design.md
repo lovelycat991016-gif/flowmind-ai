@@ -31,19 +31,19 @@ Each meeting may have one active recording. Failed and cancelled attempts remain
 
 Create `public.recordings` with:
 
-| Column | Definition |
-| --- | --- |
-| `id` | UUID primary key |
-| `meeting_id` | Required FK to `public.meetings(id)` with `on delete cascade` |
-| `user_id` | Required FK to `auth.users(id)` with owner default |
-| `storage_bucket` | Required fixed value `recordings` |
-| `storage_path` | Required unique object path |
-| `original_filename` | Required trimmed display filename |
-| `mime_type` | Required allowlisted audio MIME type |
-| `file_size_bytes` | Required positive integer up to 524288000 bytes |
-| `status` | Required upload lifecycle value |
-| `uploaded_at` | Null until object verification succeeds |
-| `created_at`, `updated_at` | UTC timestamps; `updated_at` uses the existing trigger |
+| Column                     | Definition                                                    |
+| -------------------------- | ------------------------------------------------------------- |
+| `id`                       | UUID primary key                                              |
+| `meeting_id`               | Required FK to `public.meetings(id)` with `on delete cascade` |
+| `user_id`                  | Required FK to `auth.users(id)` with owner default            |
+| `storage_bucket`           | Required fixed value `recordings`                             |
+| `storage_path`             | Required unique object path                                   |
+| `original_filename`        | Required trimmed display filename                             |
+| `mime_type`                | Required allowlisted audio MIME type                          |
+| `file_size_bytes`          | Required positive integer up to 524288000 bytes               |
+| `status`                   | Required upload lifecycle value                               |
+| `uploaded_at`              | Null until object verification succeeds                       |
+| `created_at`, `updated_at` | UTC timestamps; `updated_at` uses the existing trigger        |
 
 Allowed statuses are `pending`, `uploading`, `uploaded`, `failed`, and `cancelled`.
 

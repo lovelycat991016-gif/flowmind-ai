@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const actions = vi.hoisted(() => ({
@@ -97,8 +103,9 @@ describe("RecordingUploadForm", () => {
       "accept",
       "audio/mpeg,audio/mp4,audio/wav,audio/webm",
     );
-    expect(screen.getByText("支持 MP3、MP4、WAV 和 WebM 格式，文件不超过 500MB。"))
-      .toBeVisible();
+    expect(
+      screen.getByText("支持 MP3、MP4、WAV 和 WebM 格式，文件不超过 500MB。"),
+    ).toBeVisible();
   });
 
   it("shows a Chinese validation error for an unsupported MIME type", async () => {
@@ -136,11 +143,18 @@ describe("RecordingUploadForm", () => {
 
     await waitFor(() => expect(UploadRequest.latest).not.toBeNull());
     act(() => UploadRequest.latest?.progress(50, 100));
-    expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "50");
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuenow",
+      "50",
+    );
     act(() => UploadRequest.latest?.succeed());
 
-    await waitFor(() => expect(actions.finalizeUpload).toHaveBeenCalledWith({ recordingId }));
-    expect(await screen.findByText("录音上传完成。", { selector: "p" })).toBeVisible();
+    await waitFor(() =>
+      expect(actions.finalizeUpload).toHaveBeenCalledWith({ recordingId }),
+    );
+    expect(
+      await screen.findByText("录音上传完成。", { selector: "p" }),
+    ).toBeVisible();
   });
 
   it("shows retry after an upload failure and creates a new intent", async () => {
@@ -152,9 +166,13 @@ describe("RecordingUploadForm", () => {
     await waitFor(() => expect(UploadRequest.latest).not.toBeNull());
     act(() => UploadRequest.latest?.fail());
 
-    expect(await screen.findByRole("button", { name: "重试上传" })).toBeEnabled();
+    expect(
+      await screen.findByRole("button", { name: "重试上传" }),
+    ).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "重试上传" }));
-    await waitFor(() => expect(actions.createUploadIntent).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(actions.createUploadIntent).toHaveBeenCalledTimes(2),
+    );
   });
 
   it("aborts the browser request and cancels its recording attempt", async () => {
@@ -166,7 +184,11 @@ describe("RecordingUploadForm", () => {
     await waitFor(() => expect(UploadRequest.latest).not.toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "取消上传" }));
 
-    await waitFor(() => expect(actions.cancelUpload).toHaveBeenCalledWith({ recordingId }));
-    expect(await screen.findByText("录音上传已取消。", { selector: "p" })).toBeVisible();
+    await waitFor(() =>
+      expect(actions.cancelUpload).toHaveBeenCalledWith({ recordingId }),
+    );
+    expect(
+      await screen.findByText("录音上传已取消。", { selector: "p" }),
+    ).toBeVisible();
   });
 });

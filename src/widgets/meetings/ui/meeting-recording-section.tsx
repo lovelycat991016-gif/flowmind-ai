@@ -38,7 +38,8 @@ function RecordingMetadata({ recording }: { recording: Recording }) {
       </p>
       {recording.uploadedAt ? (
         <p className="text-muted-foreground text-sm">
-          {zhCN.recordings.uploadedAt}：{formatMeetingDate(recording.uploadedAt)}
+          {zhCN.recordings.uploadedAt}：
+          {formatMeetingDate(recording.uploadedAt)}
         </p>
       ) : null}
     </div>
@@ -50,7 +51,11 @@ export function MeetingRecordingSection({
   meetingId,
   recording,
 }: MeetingRecordingSectionProps) {
-  const canUpload = !archived && (!recording || recording.status === "failed" || recording.status === "cancelled");
+  const canUpload =
+    !archived &&
+    (!recording ||
+      recording.status === "failed" ||
+      recording.status === "cancelled");
 
   return (
     <Card>

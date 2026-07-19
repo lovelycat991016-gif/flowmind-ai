@@ -27,7 +27,9 @@ const metadata = {
 
 function authenticatedClient() {
   const client = {
-    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }) },
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: userId } } }),
+    },
     from: vi.fn(),
     storage: { from: vi.fn() },
   };
@@ -68,7 +70,9 @@ describe("recording upload actions", () => {
     };
     client.from.mockReturnValue(meetingQuery);
 
-    await expect(createUploadIntent(metadata)).resolves.toMatchObject({ status: "error" });
+    await expect(createUploadIntent(metadata)).resolves.toMatchObject({
+      status: "error",
+    });
     expect(client.from).toHaveBeenCalledWith("meetings");
     expect(meetingQuery.eq).toHaveBeenCalledWith("user_id", userId);
   });
@@ -92,7 +96,12 @@ describe("recording upload actions", () => {
       select: vi.fn().mockReturnValue({ single: updateSingle }),
     };
     client.from.mockImplementation((table: string) =>
-      table === "meetings" ? meetingQuery : client.from.mock.calls.filter(([name]) => name === "recordings").length === 1 ? insertQuery : updateQuery,
+      table === "meetings"
+        ? meetingQuery
+        : client.from.mock.calls.filter(([name]) => name === "recordings")
+              .length === 1
+          ? insertQuery
+          : updateQuery,
     );
     const createSignedUploadUrl = vi.fn().mockResolvedValue({
       data: { signedUrl: "https://storage.example/upload", path: "ignored" },
@@ -109,7 +118,11 @@ describe("recording upload actions", () => {
       },
     });
     expect(insertQuery.insert).toHaveBeenCalledWith(
-      expect.objectContaining({ id: recordingId, status: "pending", user_id: userId }),
+      expect.objectContaining({
+        id: recordingId,
+        status: "pending",
+        user_id: userId,
+      }),
     );
     expect(createSignedUploadUrl).toHaveBeenCalledWith(
       `${userId}/${meetingId}/${recordingId}.webm`,
@@ -131,7 +144,9 @@ describe("recording upload actions", () => {
     const updateQuery = {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnValue({ single: singleResult({ id: recordingId }) }),
+      select: vi
+        .fn()
+        .mockReturnValue({ single: singleResult({ id: recordingId }) }),
     };
     client.from.mockImplementation(() =>
       client.from.mock.calls.length === 1 ? recordingQuery : updateQuery,
@@ -143,9 +158,14 @@ describe("recording upload actions", () => {
       }),
     });
 
-    await expect(finalizeUpload({ recordingId })).resolves.toMatchObject({ status: "success" });
+    await expect(finalizeUpload({ recordingId })).resolves.toMatchObject({
+      status: "success",
+    });
     expect(updateQuery.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "uploaded", uploaded_at: expect.any(String) }),
+      expect.objectContaining({
+        status: "uploaded",
+        uploaded_at: expect.any(String),
+      }),
     );
   });
 
@@ -168,7 +188,9 @@ describe("recording upload actions", () => {
     client.from.mockImplementation(() =>
       client.from.mock.calls.length === 1 ? recordingQuery : failedUpdate,
     );
-    client.storage.from.mockReturnValue({ list: vi.fn().mockResolvedValue({ data: [], error: null }) });
+    client.storage.from.mockReturnValue({
+      list: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
 
     await expect(finalizeUpload({ recordingId })).resolves.toEqual({
       status: "error",
@@ -185,7 +207,9 @@ describe("recording upload actions", () => {
     };
     client.from.mockReturnValue(recordingQuery);
 
-    await expect(finalizeUpload({ recordingId })).resolves.toMatchObject({ status: "error" });
+    await expect(finalizeUpload({ recordingId })).resolves.toMatchObject({
+      status: "error",
+    });
     expect(client.storage.from).not.toHaveBeenCalled();
   });
 
@@ -199,13 +223,17 @@ describe("recording upload actions", () => {
     const updateQuery = {
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnValue({ single: singleResult({ id: recordingId }) }),
+      select: vi
+        .fn()
+        .mockReturnValue({ single: singleResult({ id: recordingId }) }),
     };
     client.from.mockImplementation(() =>
       client.from.mock.calls.length === 1 ? recordingQuery : updateQuery,
     );
 
-    await expect(cancelUpload({ recordingId })).resolves.toMatchObject({ status: "success" });
+    await expect(cancelUpload({ recordingId })).resolves.toMatchObject({
+      status: "success",
+    });
     expect(updateQuery.update).toHaveBeenCalledWith({ status: "cancelled" });
   });
 
@@ -218,6 +246,8 @@ describe("recording upload actions", () => {
     };
     client.from.mockReturnValue(recordingQuery);
 
-    await expect(cancelUpload({ recordingId })).resolves.toMatchObject({ status: "error" });
+    await expect(cancelUpload({ recordingId })).resolves.toMatchObject({
+      status: "error",
+    });
   });
 });

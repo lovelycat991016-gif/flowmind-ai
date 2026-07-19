@@ -13,6 +13,7 @@
 ### Task 1: Recording Schema And Private Bucket
 
 **Files:**
+
 - Create: `supabase/migrations/202607190001_create_recordings.sql`
 - Create: `src/features/recordings/schemas/recording-migration.test.ts`
 
@@ -25,6 +26,7 @@
 ### Task 2: Recording Domain Contracts
 
 **Files:**
+
 - Create: `src/entities/recording/model/recording.ts`
 - Create: `src/features/recordings/schemas/recording-input.ts`
 - Create: `src/features/recordings/schemas/recording-input.test.ts`
@@ -38,6 +40,7 @@
 ### Task 3: Owner-Scoped Recording Query
 
 **Files:**
+
 - Create: `src/features/recordings/queries/get-recording-for-meeting.ts`
 - Create: `src/features/recordings/queries/get-recording-for-meeting.test.ts`
 
@@ -50,6 +53,7 @@
 ### Task 4: Upload Lifecycle Server Actions
 
 **Files:**
+
 - Create: `src/features/recordings/actions/recording-action-state.ts`
 - Create: `src/features/recordings/actions/create-recording-upload.ts`
 - Create: `src/features/recordings/actions/finalize-recording-upload.ts`
@@ -65,6 +69,7 @@
 ### Task 5: Accessible Upload Form
 
 **Files:**
+
 - Create: `src/features/recordings/ui/recording-upload-form.tsx`
 - Create: `src/features/recordings/ui/recording-upload-form.test.tsx`
 - Modify: `src/shared/i18n/zh-CN.ts`
@@ -78,6 +83,7 @@
 ### Task 6: Meeting Detail Composition
 
 **Files:**
+
 - Modify: `src/app/meetings/[meetingId]/page.tsx`
 - Modify: `src/widgets/meetings/ui/meeting-detail.tsx`
 - Create: `src/widgets/meetings/ui/meeting-recording-section.tsx`
@@ -92,6 +98,7 @@
 ### Task 7: Sprint Verification And QA
 
 **Files:**
+
 - Create: `docs/qa/sprint-4-audio-upload-qa.md`
 - Modify: `README.md`
 
