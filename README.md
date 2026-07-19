@@ -91,6 +91,18 @@ Sprint 7 adds the meeting-intelligence foundation:
 
 The MVP intentionally uses an injected provider transport in automated tests. A live LLM transport, production provider credentials, retry controls, editing, exports, AI chat, and knowledge search are not part of Sprint 7.
 
+## Sprint 8
+
+Sprint 8 prepares the MVP for private beta without expanding the product surface:
+
+- Production environment validation, Supabase RLS and private Storage verification checklists, and service-role/Cron boundary runbooks
+- Redacted server-side operational logging with correlation IDs and safe failure classifications
+- An owner-linked, append-only AI usage ledger for meeting-intelligence attempts; it is not a billing, quota, or customer analytics feature
+- Chinese first-use dashboard guidance for creating a meeting, uploading audio, waiting for processing, and reviewing results
+- Private-beta release, support, rollback, and incident documentation
+
+Live beta verification is recorded in `docs/qa/sprint-8-production-hardening-qa.md`. It must be completed in the target Vercel and Supabase environment before invitations are broadened.
+
 ## Technology
 
 - Next.js 15 and React 19
@@ -155,7 +167,7 @@ docs/
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
    ```
 
-3. Apply all migrations in filename order through the Supabase CLI or SQL editor, including profiles, meetings, recordings, processing jobs, transcription, worker leases, transcription execution, and meeting intelligence.
+3. Apply all migrations in filename order through the Supabase CLI or SQL editor, including profiles, meetings, recordings, processing jobs, transcription, worker leases, transcription execution, meeting intelligence, and AI usage events.
 
 4. In Supabase Auth URL configuration, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/callback` as a redirect URL.
 
@@ -218,6 +230,8 @@ Sprint 4 upload validation and operational-risk notes are recorded in `docs/qa/s
 Sprint 6 transcription worker and meeting-detail validation notes are recorded in `docs/qa/sprint-6-transcription-worker-qa.md`.
 
 Sprint 7 meeting-intelligence release verification and known limitations are recorded in `docs/qa/sprint-7-meeting-intelligence-qa.md`.
+
+Sprint 8 private-beta production verification, release evidence fields, and operational limitations are recorded in `docs/qa/sprint-8-production-hardening-qa.md`.
 
 ## Verification
 
