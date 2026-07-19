@@ -72,12 +72,12 @@ Object paths are deterministic:
 {user_id}/{meeting_id}/{recording_id}.{extension}
 ```
 
-The Server Action creates the database intent and a signed upload URL. The signed URL expires after exactly 600 seconds (10 minutes). The browser uploads only bytes through that short-lived URL. It never writes recording metadata directly.
+The Server Action creates the database intent and a signed upload URL. Signed upload URLs use the Supabase Storage SDK managed short-lived expiration window. The application does not implement custom signing or override provider expiry. URLs are generated only after authenticated owner verification. The browser uploads only bytes through that short-lived URL and never writes recording metadata directly.
 
 ## Upload Lifecycle
 
 1. Client validates selected file type and size, then requests an upload intent.
-2. Server Action repeats metadata validation, verifies the authenticated meeting owner, inserts a `pending` recording, transitions it to `uploading`, and issues a 10-minute signed upload URL.
+2. Server Action repeats metadata validation, verifies the authenticated meeting owner, inserts a `pending` recording, transitions it to `uploading`, and issues a Supabase Storage SDK managed short-lived signed upload URL.
 3. Browser uploads directly to the private bucket and exposes progress.
 4. Client calls a Server Action to finalize; it verifies the expected object exists and marks the row `uploaded` with `uploaded_at`.
 5. Cancel marks the current attempt `cancelled` and makes a best-effort owner-scoped object removal.

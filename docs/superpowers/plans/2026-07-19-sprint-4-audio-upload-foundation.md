@@ -4,7 +4,7 @@
 
 **Goal:** Deliver private, owner-isolated audio upload foundation for active meetings without audio processing.
 
-**Architecture:** Server Components read owner-scoped recording metadata. Server Actions validate intent, enforce meeting ownership, issue a 600-second signed Storage upload URL, finalize object verification, and transition state. A client component uploads bytes only through that signed URL and does not perform database CRUD.
+**Architecture:** Server Components read owner-scoped recording metadata. Server Actions validate intent, enforce meeting ownership, issue a Supabase Storage SDK managed short-lived signed upload URL, finalize object verification, and transition state. A client component uploads bytes only through that signed URL and does not perform database CRUD.
 
 **Tech Stack:** Next.js 15 App Router, React 19, TypeScript, Supabase SSR and Storage, PostgreSQL RLS, Zod, Vitest, Testing Library.
 
@@ -56,7 +56,7 @@
 - Create: `src/features/recordings/actions/cancel-recording-upload.ts`
 - Create: `src/features/recordings/actions/recording-actions.test.ts`
 
-- [ ] Write failing action tests for login redirect, meeting ownership, 500-MB server rejection, 600-second URL expiry, active-recording conflict, successful finalization, cancellation, failure, and no leaked provider errors.
+- [ ] Write failing action tests for login redirect, meeting ownership, 500-MB server rejection, Supabase SDK signed upload URL generation, active-recording conflict, successful finalization, cancellation, failure, and no leaked provider errors.
 - [ ] Run focused tests and confirm RED.
 - [ ] Implement actions using the authenticated server client. Verify expected Storage object metadata before `uploaded`; use safe Chinese errors and route revalidation.
 - [ ] Run focused tests and confirm green.

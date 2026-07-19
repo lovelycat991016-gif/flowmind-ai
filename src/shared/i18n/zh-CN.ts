@@ -102,6 +102,9 @@ export const zhCN = {
       renameFailed: "暂时无法重命名会议，请重试。",
     },
   },
+  recordings: {
+    uploadActionFailed: "暂时无法完成录音上传，请重试。",
+  },
   auth: {
     email: "邮箱地址",
     emailPlaceholder: "name@example.com",
