@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { MeetingDetail as MeetingDetailModel } from "@/entities/meeting/model/meeting";
 import type { Recording } from "@/entities/recording/model/recording";
 import type { ProcessingJob } from "@/entities/processing-job/model/processing-job";
+import type { TranscriptWithSegments } from "@/features/transcription/queries/get-transcript-for-recording";
 import { formatMeetingDate } from "@/entities/meeting/model/meeting";
 import { RenameMeetingForm } from "@/features/meetings/ui/rename-meeting-form";
 import { archiveMeetingAction } from "@/features/meetings/actions/archive-meeting";
@@ -13,15 +14,18 @@ import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { zhCN } from "@/shared/i18n/zh-CN";
 import { MeetingRecordingSection } from "./meeting-recording-section";
+import { TranscriptSection } from "@/features/transcription/ui/transcript-section";
 
 export function MeetingDetail({
   meeting,
   processingJob = null,
   recording = null,
+  transcript = null,
 }: {
   meeting: MeetingDetailModel;
   processingJob?: ProcessingJob | null;
   recording?: Recording | null;
+  transcript?: TranscriptWithSegments | null;
 }) {
   const isArchived = Boolean(meeting.archivedAt);
   return (
@@ -59,6 +63,12 @@ export function MeetingDetail({
         meetingId={meeting.id}
         processingJob={processingJob}
         recording={recording}
+      />
+      <TranscriptSection
+        archived={isArchived}
+        processingJob={processingJob}
+        recording={recording}
+        transcript={transcript}
       />
       <Card>
         <CardHeader>

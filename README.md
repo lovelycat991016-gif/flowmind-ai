@@ -59,6 +59,26 @@ The recording lifecycle is `pending` to `uploading`, then `uploaded`, `failed`, 
 
 Transcription, AI summaries, action extraction, and all background processing remain deferred.
 
+## Sprint 5
+
+Sprint 5 adds the processing-job foundation:
+
+- Owner-isolated `processing_jobs` with queued, running, completed, failed, and cancelled states
+- Idempotent queued-job creation after recording upload finalization
+- Owner-scoped processing-status reads and meeting-detail status display
+
+## Sprint 6
+
+Sprint 6 delivers the bounded transcription pipeline:
+
+- Owner-isolated `transcripts` and ordered `transcript_segments`
+- Service-role worker claim lease plus protected completion and failure RPCs
+- Private Storage audio read and an isolated `whisper-1` provider adapter
+- Safe provider failure-code handling without raw database, audio, or provider details
+- Read-only transcript content and timestamped segments in meeting detail
+
+No summaries, action items, AI chat, FFmpeg, or audio chunking are introduced.
+
 ## Technology
 
 - Next.js 15 and React 19
@@ -79,7 +99,8 @@ src/
 |   |-- auth/                    # Authentication actions, policies, schemas, and UI
 |   |-- dashboard/               # Query-driven dashboard composition
 |   |-- meetings/                # Server actions, queries, schemas, and meeting UI
-|   `-- recordings/              # Recording actions, queries, schemas, and upload UI
+|   |-- recordings/              # Recording actions, queries, schemas, and upload UI
+|   `-- transcription/           # Transcript queries, provider adapter, worker contracts, and UI
 |-- shared/
 |   |-- config/                  # Validated public environment configuration
 |   |-- lib/supabase/            # Browser, server, and middleware Supabase adapters
@@ -180,6 +201,8 @@ Detailed responsive and accessibility results are recorded in `docs/qa/sprint-2-
 Sprint 3 validation notes, including the pending browser screenshot limitation, are recorded in `docs/qa/sprint-3-meeting-management-qa.md`.
 
 Sprint 4 upload validation and operational-risk notes are recorded in `docs/qa/sprint-4-audio-upload-qa.md`.
+
+Sprint 6 transcription worker and meeting-detail validation notes are recorded in `docs/qa/sprint-6-transcription-worker-qa.md`.
 
 ## Verification
 

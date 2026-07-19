@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getMeetingById: vi.fn(),
   getProcessingJobForRecording: vi.fn(),
   getRecordingForMeeting: vi.fn(),
+  getTranscriptForRecording: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
@@ -20,14 +21,23 @@ vi.mock(
     getProcessingJobForRecording: mocks.getProcessingJobForRecording,
   }),
 );
+vi.mock(
+  "@/features/transcription/queries/get-transcript-for-recording",
+  () => ({
+    getTranscriptForRecording: mocks.getTranscriptForRecording,
+  }),
+);
 vi.mock("@/widgets/meetings/ui/meeting-detail", () => ({
   MeetingDetail: ({
     processingJob,
+    transcript,
   }: {
     processingJob?: { status: string } | null;
+    transcript?: { id: string } | null;
   }) => (
     <div
       data-processing-status={processingJob?.status ?? "none"}
+      data-transcript-id={transcript?.id ?? "none"}
       data-testid="processing-status"
     />
   ),
@@ -68,6 +78,9 @@ describe("MeetingDetailPage", () => {
   it("loads the processing job only when the meeting has a recording", async () => {
     mocks.getRecordingForMeeting.mockResolvedValue(recording);
     mocks.getProcessingJobForRecording.mockResolvedValue({ status: "queued" });
+    mocks.getTranscriptForRecording.mockResolvedValue({
+      id: "f734eca3-8ea2-47ed-9eaa-0c3c4ec0f83f",
+    });
 
     render(
       await MeetingDetailPage({
@@ -78,9 +91,14 @@ describe("MeetingDetailPage", () => {
     expect(mocks.getProcessingJobForRecording).toHaveBeenCalledWith(
       recording.id,
     );
+    expect(mocks.getTranscriptForRecording).toHaveBeenCalledWith(recording.id);
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "queued",
+    );
+    expect(screen.getByTestId("processing-status")).toHaveAttribute(
+      "data-transcript-id",
+      "f734eca3-8ea2-47ed-9eaa-0c3c4ec0f83f",
     );
   });
 
@@ -94,6 +112,7 @@ describe("MeetingDetailPage", () => {
     );
 
     expect(mocks.getProcessingJobForRecording).not.toHaveBeenCalled();
+    expect(mocks.getTranscriptForRecording).not.toHaveBeenCalled();
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "none",
