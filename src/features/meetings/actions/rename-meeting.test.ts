@@ -32,7 +32,7 @@ describe("renameMeetingAction", () => {
       form({ id: meetingId, title: " " }),
     );
 
-    expect(state.fieldErrors.title).toBe("Enter a meeting title.");
+    expect(state.fieldErrors.title).toBe("请输入会议标题。");
     expect(mocks.createClient).not.toHaveBeenCalled();
   });
 

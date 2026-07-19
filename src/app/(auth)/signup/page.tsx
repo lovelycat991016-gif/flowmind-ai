@@ -4,25 +4,26 @@ import Link from "next/link";
 import { signUpAction } from "@/features/auth/actions/auth-actions";
 import { AuthForm } from "@/features/auth/ui/auth-form";
 import { AuthPanel } from "@/features/auth/ui/auth-panel";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
-export const metadata: Metadata = { title: "Create account" };
+export const metadata: Metadata = { title: zhCN.auth.createAccount };
 
 export default function SignUpPage() {
   return (
     <AuthPanel
-      description="Create your private FlowMind meeting workspace."
+      description={zhCN.auth.signUpDescription}
       footer={
         <>
-          Already have an account?{" "}
+          {zhCN.auth.hasAccount}{" "}
           <Link
             className="text-primary font-medium hover:underline"
             href="/login"
           >
-            Sign in
+            {zhCN.auth.signIn}
           </Link>
         </>
       }
-      title="Create your account"
+      title={zhCN.auth.signUpTitle}
     >
       <AuthForm action={signUpAction} mode="signup" />
     </AuthPanel>

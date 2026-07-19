@@ -1,5 +1,7 @@
 import { AudioLines } from "lucide-react";
 
+import { zhCN } from "@/shared/i18n/zh-CN";
+
 export default function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -10,14 +12,14 @@ export default function AuthLayout({
           <span className="flex size-10 items-center justify-center rounded-md bg-[#d7f0e5] text-[#155b42]">
             <AudioLines aria-hidden="true" className="size-5" />
           </span>
-          FlowMind AI
+          {zhCN.brand.name}
         </div>
         <blockquote className="max-w-lg space-y-5">
           <p className="text-3xl leading-tight font-semibold">
-            Turn every meeting into decisions you can act on.
+            {zhCN.brand.statement}
           </p>
           <footer className="text-sm text-[#b9c9c1]">
-            Focused meeting intelligence for modern teams.
+            {zhCN.brand.description}
           </footer>
         </blockquote>
       </section>
@@ -27,7 +29,7 @@ export default function AuthLayout({
             <span className="bg-accent text-accent-foreground flex size-10 items-center justify-center rounded-md">
               <AudioLines aria-hidden="true" className="size-5" />
             </span>
-            FlowMind AI
+            {zhCN.brand.name}
           </div>
           {children}
         </div>

@@ -8,13 +8,13 @@ describe("DashboardView", () => {
     render(<DashboardView userName="Alex" data={data} />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Good morning, Alex" }),
+      screen.getByRole("heading", { level: 1, name: "早上好，Alex" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Recent meetings" }),
+      screen.getByRole("heading", { level: 2, name: "最近会议" }),
     ).toBeVisible();
     expect(
-      screen.getByRole("heading", { level: 2, name: "Quick actions" }),
+      screen.getByRole("heading", { level: 2, name: "快捷操作" }),
     ).toBeVisible();
   });
 
@@ -25,35 +25,35 @@ describe("DashboardView", () => {
     expect(statistics).toHaveLength(4);
     expect(statistics.map((card) => card.textContent)).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("12Total meetings"),
-        expect.stringContaining("8Active meetings"),
-        expect.stringContaining("4Archived meetings"),
-        expect.stringContaining("3Meetings this week"),
+        expect.stringContaining("12全部会议"),
+        expect.stringContaining("8进行中的会议"),
+        expect.stringContaining("4已归档会议"),
+        expect.stringContaining("3本周会议"),
       ]),
     );
   });
 
   it("renders query-derived active recent meetings", () => {
     render(<DashboardView userName="Alex" data={data} />);
-    const list = screen.getByRole("list", { name: "Recent meetings" });
+    const list = screen.getByRole("list", { name: "最近会议" });
     const rows = within(list).getAllByTestId("meeting-row");
 
     expect(rows).toHaveLength(1);
     expect(within(list).getByText("Product weekly")).toBeVisible();
-    expect(within(list).getByText(/Jul 17, 2026/i)).toBeVisible();
+    expect(within(list).getByText(/2026年7月17日/)).toBeVisible();
   });
 
   it("provides meeting quick actions", () => {
     render(<DashboardView userName="Alex" data={data} />);
     const quickActions = screen
-      .getByRole("heading", { level: 2, name: "Quick actions" })
+      .getByRole("heading", { level: 2, name: "快捷操作" })
       .closest("section")!;
 
     expect(
-      within(quickActions).getByRole("link", { name: /New meeting/ }),
+      within(quickActions).getByRole("link", { name: /新建会议/ }),
     ).toHaveAttribute("href", "/meetings/new");
     expect(
-      within(quickActions).getByRole("link", { name: /View meetings/ }),
+      within(quickActions).getByRole("link", { name: /查看会议/ }),
     ).toHaveAttribute("href", "/meetings");
   });
 });

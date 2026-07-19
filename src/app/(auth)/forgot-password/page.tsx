@@ -4,22 +4,23 @@ import Link from "next/link";
 import { requestPasswordResetAction } from "@/features/auth/actions/auth-actions";
 import { AuthForm } from "@/features/auth/ui/auth-form";
 import { AuthPanel } from "@/features/auth/ui/auth-panel";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
-export const metadata: Metadata = { title: "Reset password" };
+export const metadata: Metadata = { title: zhCN.auth.forgotTitle };
 
 export default function ForgotPasswordPage() {
   return (
     <AuthPanel
-      description="Enter your email and we will send a secure password reset link."
+      description={zhCN.auth.forgotDescription}
       footer={
         <Link
           className="text-primary font-medium hover:underline"
           href="/login"
         >
-          Return to sign in
+          {zhCN.auth.returnLogin}
         </Link>
       }
-      title="Reset your password"
+      title={zhCN.auth.forgotTitle}
     >
       <AuthForm action={requestPasswordResetAction} mode="forgot-password" />
     </AuthPanel>

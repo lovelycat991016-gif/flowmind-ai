@@ -5,6 +5,7 @@ import {
   type MeetingListItem,
 } from "@/entities/meeting/model/meeting";
 import { EmptyPlaceholder } from "@/shared/ui/empty-placeholder";
+import { zhCN } from "@/shared/i18n/zh-CN";
 import {
   Card,
   CardContent,
@@ -22,20 +23,23 @@ export function RecentMeetings({
     <Card className="overflow-hidden" id="recent-meetings">
       <CardHeader className="border-b px-5 pt-5 pb-4 sm:px-6">
         <CardTitle as="h2" id="recent-meetings-title">
-          Recent meetings
+          {zhCN.dashboard.recent}
         </CardTitle>
-        <CardDescription>Your latest active meetings.</CardDescription>
+        <CardDescription>{zhCN.dashboard.activeMeetings}</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         {!meetings.length ? (
           <EmptyPlaceholder
             className="min-h-44 border-0 shadow-none"
-            description="Create a meeting to see it here."
+            description={zhCN.dashboard.createToSee}
             icon={Video}
-            title="No recent meetings"
+            title={zhCN.dashboard.noRecent}
           />
         ) : (
-          <ul aria-label="Recent meetings" className="divide-border divide-y">
+          <ul
+            aria-label={zhCN.dashboard.recent}
+            className="divide-border divide-y"
+          >
             {meetings.map((meeting) => (
               <li
                 className="grid min-h-20 grid-cols-[40px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 px-5 py-4 sm:grid-cols-[40px_minmax(0,1fr)_auto] sm:px-6"

@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { getMeetingById } from "@/features/meetings/queries/get-meetings";
 import { meetingIdSchema } from "@/features/meetings/schemas/meeting-input";
 import { MeetingDetail } from "@/widgets/meetings/ui/meeting-detail";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
-export const metadata: Metadata = { title: "Meeting" };
+export const metadata: Metadata = { title: zhCN.meetings.meeting };
 
 export default async function MeetingDetailPage({
   params,

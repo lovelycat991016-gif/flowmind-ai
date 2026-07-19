@@ -6,6 +6,7 @@ import {
   Video,
   type LucideIcon,
 } from "lucide-react";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export type NavigationItem = {
   label: string;
@@ -17,12 +18,12 @@ export type NavigationItem = {
 
 export const primaryNavigation: ReadonlyArray<NavigationItem> = [
   {
-    label: "Dashboard",
+    label: zhCN.navigation.dashboard,
     icon: LayoutDashboard,
     href: "/dashboard",
   },
-  { label: "Meetings", icon: Video, href: "/meetings" },
-  { label: "Summaries", icon: FileText, reserved: true },
-  { label: "Action Items", icon: ListChecks, reserved: true },
-  { label: "Settings", icon: Settings, disabled: true },
+  { label: zhCN.navigation.meetings, icon: Video, href: "/meetings" },
+  { label: zhCN.navigation.summaries, icon: FileText, reserved: true },
+  { label: zhCN.navigation.actionItems, icon: ListChecks, reserved: true },
+  { label: zhCN.navigation.settings, icon: Settings, disabled: true },
 ];

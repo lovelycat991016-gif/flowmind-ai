@@ -1,15 +1,12 @@
 import { z } from "zod";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
-const emailSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .email("Enter a valid email address.");
+const emailSchema = z.string().trim().toLowerCase().email(zhCN.auth.validEmail);
 
 const passwordSchema = z
   .string()
-  .min(8, "Password must be at least 8 characters.")
-  .max(128, "Password must be 128 characters or fewer.");
+  .min(8, zhCN.auth.passwordLength)
+  .max(128, zhCN.auth.passwordMax);
 
 const matchingPasswords = {
   password: passwordSchema,
@@ -18,7 +15,7 @@ const matchingPasswords = {
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1, "Enter your password."),
+  password: z.string().min(1, zhCN.auth.passwordRequired),
 });
 
 export const signUpSchema = z
@@ -27,7 +24,7 @@ export const signUpSchema = z
     ...matchingPasswords,
   })
   .refine(({ password, confirmPassword }) => password === confirmPassword, {
-    message: "Passwords do not match.",
+    message: zhCN.auth.passwordMismatch,
     path: ["confirmPassword"],
   });
 
@@ -36,7 +33,7 @@ export const forgotPasswordSchema = z.object({ email: emailSchema });
 export const updatePasswordSchema = z
   .object(matchingPasswords)
   .refine(({ password, confirmPassword }) => password === confirmPassword, {
-    message: "Passwords do not match.",
+    message: zhCN.auth.passwordMismatch,
     path: ["confirmPassword"],
   });
 

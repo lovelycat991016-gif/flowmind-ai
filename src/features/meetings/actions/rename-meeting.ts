@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { renameMeetingSchema } from "@/features/meetings/schemas/meeting-input";
 import { createClient } from "@/shared/lib/supabase/server";
+import { zhCN } from "@/shared/i18n/zh-CN";
 import {
   firstFieldErrors,
   type MeetingActionState,
@@ -25,7 +26,7 @@ export async function renameMeetingAction(
   if (!parsed.success) {
     return {
       status: "error",
-      message: "Check the highlighted fields.",
+      message: zhCN.meetings.validation.checkFields,
       fieldErrors: firstFieldErrors(parsed.error.issues),
       values,
     };
@@ -48,7 +49,7 @@ export async function renameMeetingAction(
   if (error || !data) {
     return {
       status: "error",
-      message: "We couldn't rename this meeting. Try again.",
+      message: zhCN.meetings.validation.renameFailed,
       fieldErrors: {},
       values,
     };
@@ -59,7 +60,7 @@ export async function renameMeetingAction(
   revalidatePath(`/meetings/${data.id}`);
   return {
     status: "success",
-    message: "Meeting renamed.",
+    message: zhCN.meetings.renamed,
     fieldErrors: {},
     values: { title: parsed.data.title, meetingDateLocal: "" },
   };

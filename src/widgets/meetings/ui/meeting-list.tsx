@@ -6,6 +6,7 @@ import { buildMeetingListHref } from "@/features/meetings/schemas/meeting-list-s
 import { Badge } from "@/shared/ui/badge";
 import { buttonVariants } from "@/shared/ui/button";
 import { EmptyPlaceholder } from "@/shared/ui/empty-placeholder";
+import { zhCN, t } from "@/shared/i18n/zh-CN";
 
 export function MeetingList({
   meetings,
@@ -18,16 +19,16 @@ export function MeetingList({
 }) {
   if (!meetings.length) {
     const title = state.q
-      ? "No meetings match your search"
+      ? zhCN.meetings.noMatch
       : state.filter === "archived"
-        ? "No archived meetings"
-        : "No active meetings yet";
+        ? zhCN.meetings.noArchived
+        : zhCN.meetings.noActive;
     return (
       <EmptyPlaceholder
         description={
           state.q
-            ? "Try a different meeting title."
-            : "Meetings in this view will appear here."
+            ? zhCN.meetings.noMatchDescription
+            : zhCN.meetings.listDescription
         }
         icon={Inbox}
         title={title}
@@ -37,12 +38,12 @@ export function MeetingList({
   return (
     <section
       className="bg-card overflow-hidden rounded-lg border shadow-[var(--shadow-card)]"
-      aria-label="Meeting list"
+      aria-label={zhCN.meetings.title}
     >
       <div className="text-muted-foreground hidden grid-cols-[minmax(0,1fr)_220px_120px] border-b px-6 py-3 text-xs font-medium md:grid">
-        <span>Meeting</span>
-        <span>Date</span>
-        <span>Status</span>
+        <span>{zhCN.meetings.meeting}</span>
+        <span>{zhCN.meetings.date}</span>
+        <span>{zhCN.meetings.status}</span>
       </div>
       <ul className="divide-y">
         {meetings.map((meeting) => (
@@ -65,38 +66,40 @@ export function MeetingList({
               {meeting.archivedAt ? (
                 <Badge variant="neutral">
                   <Archive className="mr-1 size-3" aria-hidden="true" />
-                  Archived
+                  {zhCN.meetings.archived}
                 </Badge>
               ) : (
-                <Badge variant="success">Active</Badge>
+                <Badge variant="success">{zhCN.meetings.active}</Badge>
               )}
             </span>
           </li>
         ))}
       </ul>
       <nav
-        aria-label="Meeting pages"
+        aria-label={zhCN.meetings.title}
         className="flex items-center justify-between border-t px-5 py-4"
       >
         {state.page > 1 ? (
           <a
-            aria-label="Previous page"
+            aria-label={zhCN.common.previous}
             className={buttonVariants({ variant: "outline" })}
             href={buildMeetingListHref(state, { page: state.page - 1 })}
           >
-            Previous
+            {zhCN.common.previous}
           </a>
         ) : (
           <span />
         )}
-        <span className="text-muted-foreground text-xs">Page {state.page}</span>
+        <span className="text-muted-foreground text-xs">
+          {t("common", "page", { page: state.page })}
+        </span>
         {hasNextPage ? (
           <a
-            aria-label="Next page"
+            aria-label={zhCN.common.next}
             className={buttonVariants({ variant: "outline" })}
             href={buildMeetingListHref(state, { page: state.page + 1 })}
           >
-            Next
+            {zhCN.common.next}
           </a>
         ) : (
           <span />

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { deleteMeetingAction } from "@/features/meetings/actions/delete-meeting";
 import { Button } from "@/shared/ui/button";
+import { t, zhCN } from "@/shared/i18n/zh-CN";
 
 export function DeleteMeetingDialog({
   meetingId,
@@ -35,7 +36,7 @@ export function DeleteMeetingDialog({
         type="button"
         variant="outline"
       >
-        Delete meeting
+        {zhCN.meetings.deleteMeeting}
       </Button>
       {open ? (
         <div
@@ -56,14 +57,13 @@ export function DeleteMeetingDialog({
             role="dialog"
           >
             <h2 className="text-lg font-semibold" id="delete-title">
-              Delete {title}?
+              {t("meetings", "deleteTitle", { title })}
             </h2>
             <p
               className="text-muted-foreground mt-2 text-sm"
               id="delete-description"
             >
-              This permanently deletes the meeting. This action cannot be
-              undone.
+              {zhCN.meetings.deleteDescription}
             </p>
             <form
               action={deleteMeetingAction}
@@ -71,13 +71,13 @@ export function DeleteMeetingDialog({
             >
               <input name="id" type="hidden" value={meetingId} />
               <Button onClick={close} type="button" variant="outline">
-                Cancel
+                {zhCN.common.cancel}
               </Button>
               <Button
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 type="submit"
               >
-                Delete permanently
+                {zhCN.meetings.deletePermanently}
               </Button>
             </form>
           </div>

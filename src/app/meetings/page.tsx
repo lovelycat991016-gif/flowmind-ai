@@ -6,8 +6,9 @@ import {
   type MeetingSearchParams,
 } from "@/features/meetings/schemas/meeting-list-state";
 import { MeetingList } from "@/widgets/meetings/ui/meeting-list";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
-export const metadata: Metadata = { title: "Meetings" };
+export const metadata: Metadata = { title: zhCN.meetings.title };
 
 export default async function MeetingsPage({
   searchParams,
@@ -20,10 +21,12 @@ export default async function MeetingsPage({
     <div className="mx-auto max-w-[1440px] space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
       <header className="flex items-end justify-between">
         <div>
-          <p className="text-muted-foreground text-sm">Workspace</p>
-          <h1 className="mt-1 text-2xl font-semibold">Meetings</h1>
+          <p className="text-muted-foreground text-sm">
+            {zhCN.navigation.workspace}
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold">{zhCN.meetings.title}</h1>
           <p className="text-muted-foreground mt-2 text-sm">
-            Manage your meeting history and lifecycle.
+            {zhCN.meetings.manageHistory}
           </p>
         </div>
       </header>

@@ -3,6 +3,7 @@ import { QuickActions } from "@/widgets/dashboard/ui/quick-actions";
 import { RecentMeetings } from "@/widgets/dashboard/ui/recent-meetings";
 import { StatisticCard } from "@/widgets/dashboard/ui/statistic-card";
 import { WelcomeBanner } from "@/widgets/dashboard/ui/welcome-banner";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export function DashboardView({
   userName,
@@ -14,45 +15,45 @@ export function DashboardView({
   const statistics = [
     {
       id: "total",
-      label: "Total meetings",
+      label: zhCN.dashboard.totalMeetings,
       value: data.metrics.total,
-      context: "All meetings",
+      context: zhCN.dashboard.totalMeetings,
       icon: "total" as const,
     },
     {
       id: "active",
-      label: "Active meetings",
+      label: zhCN.dashboard.activeMeetings,
       value: data.metrics.active,
-      context: "Available now",
+      context: zhCN.meetings.active,
       icon: "active" as const,
     },
     {
       id: "archived",
-      label: "Archived meetings",
+      label: zhCN.dashboard.archivedMeetings,
       value: data.metrics.archived,
-      context: "Stored for reference",
+      context: zhCN.meetings.archived,
       icon: "archived" as const,
     },
     {
       id: "week",
-      label: "Meetings this week",
+      label: zhCN.dashboard.meetingsThisWeek,
       value: data.metrics.thisWeek,
-      context: "Active meetings since Monday",
+      context: zhCN.dashboard.activeMeetings,
       icon: "week" as const,
     },
   ];
   const actions = [
     {
       id: "new",
-      label: "New meeting",
-      description: "Add a meeting to your workspace",
+      label: zhCN.dashboard.newMeeting,
+      description: zhCN.meetings.createDescription,
       href: "/meetings/new",
       icon: "create" as const,
     },
     {
       id: "all",
-      label: "View meetings",
-      description: "Search and manage meeting history",
+      label: zhCN.dashboard.viewMeetings,
+      description: zhCN.dashboard.searchAndManage,
       href: "/meetings",
       icon: "history" as const,
     },
@@ -66,7 +67,7 @@ export function DashboardView({
 
       <section aria-labelledby="overview-heading" className="mt-6 lg:mt-8">
         <h2 className="sr-only" id="overview-heading">
-          Dashboard overview
+          {zhCN.navigation.dashboard}
         </h2>
         <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4 xl:gap-5">
           {statistics.map((statistic) => (

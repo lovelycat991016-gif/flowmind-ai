@@ -9,45 +9,40 @@ describe("AuthForm", () => {
       <AuthForm
         action={vi.fn(async () => ({
           status: "success" as const,
-          message: "Signed in.",
+          message: "登录成功。",
         }))}
         mode="login"
       />,
     );
 
-    expect(screen.getByLabelText("Email address")).toHaveAttribute(
-      "type",
-      "email",
+    expect(screen.getByLabelText("邮箱地址")).toHaveAttribute("type", "email");
+    expect(screen.getByLabelText("密码")).toHaveAttribute("type", "password");
+    expect(screen.getByRole("button", { name: "登录" })).toBeEnabled();
+    expect(screen.getByRole("link", { name: "忘记密码？" })).toHaveAttribute(
+      "href",
+      "/forgot-password",
     );
-    expect(screen.getByLabelText("Password")).toHaveAttribute(
-      "type",
-      "password",
-    );
-    expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
-    expect(
-      screen.getByRole("link", { name: "Forgot password?" }),
-    ).toHaveAttribute("href", "/forgot-password");
   });
 
   it("shows a safe server error after submission", async () => {
     const action = vi.fn(async () => ({
       status: "error" as const,
-      message: "Email or password is incorrect.",
+      message: "邮箱或密码不正确。",
     }));
 
     render(<AuthForm action={action} mode="login" />);
-    fireEvent.change(screen.getByLabelText("Email address"), {
+    fireEvent.change(screen.getByLabelText("邮箱地址"), {
       target: { value: "person@example.com" },
     });
-    fireEvent.change(screen.getByLabelText("Password"), {
+    fireEvent.change(screen.getByLabelText("密码"), {
       target: { value: "incorrect-password" },
     });
     fireEvent.submit(
-      screen.getByRole("button", { name: "Sign in" }).closest("form")!,
+      screen.getByRole("button", { name: "登录" }).closest("form")!,
     );
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Email or password is incorrect.",
+      "邮箱或密码不正确。",
     );
     expect(action).toHaveBeenCalledOnce();
   });
@@ -57,18 +52,16 @@ describe("AuthForm", () => {
       <AuthForm
         action={vi.fn(async () => ({
           status: "success" as const,
-          message: "Check email.",
+          message: "请查收邮件。",
         }))}
         mode="signup"
       />,
     );
 
-    expect(screen.getByLabelText("Confirm password")).toHaveAttribute(
+    expect(screen.getByLabelText("确认密码")).toHaveAttribute(
       "type",
       "password",
     );
-    expect(
-      screen.getByRole("button", { name: "Create account" }),
-    ).toBeEnabled();
+    expect(screen.getByRole("button", { name: "创建账号" })).toBeEnabled();
   });
 });

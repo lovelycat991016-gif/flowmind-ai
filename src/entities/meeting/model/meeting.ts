@@ -59,7 +59,7 @@ export function mapMeetingRow(row: MeetingRow): MeetingListItem {
   };
 }
 
-export function formatMeetingDate(value: string, locale = "en-US") {
+export function formatMeetingDate(value: string, locale = "zh-CN") {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "short",

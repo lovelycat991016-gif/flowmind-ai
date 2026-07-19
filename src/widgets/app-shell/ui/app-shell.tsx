@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { AppHeader } from "@/widgets/app-shell/ui/app-header";
 import { AppSidebar } from "@/widgets/app-shell/ui/app-sidebar";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 type AppShellProps = {
   children: ReactNode;
@@ -86,7 +87,7 @@ export function AppShell({ children, userActions, userEmail }: AppShellProps) {
           }}
         >
           <div
-            aria-label="Navigation"
+            aria-label={zhCN.navigation.workspace}
             aria-modal="true"
             className="h-full w-[min(84vw,320px)] shadow-[var(--shadow-elevated)]"
             id={dialogId}
@@ -96,7 +97,7 @@ export function AppShell({ children, userActions, userEmail }: AppShellProps) {
             <div className="relative h-full">
               <AppSidebar mobile onNavigate={closeNavigation} />
               <Button
-                aria-label="Close navigation"
+                aria-label="关闭导航"
                 className="absolute top-3 right-3 text-white hover:bg-white/10"
                 onClick={closeNavigation}
                 size="icon"

@@ -9,6 +9,7 @@ import type { MeetingListState } from "@/features/meetings/schemas/meeting-list-
 import { buildMeetingListHref } from "@/features/meetings/schemas/meeting-list-state";
 import { buttonVariants } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export function MeetingListControls({ state }: { state: MeetingListState }) {
   const router = useRouter();
@@ -16,24 +17,24 @@ export function MeetingListControls({ state }: { state: MeetingListState }) {
     <div className="bg-card grid gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)] lg:grid-cols-[minmax(260px,1fr)_auto_auto] lg:items-end">
       <form
         action="/meetings"
-        aria-label="Search meetings"
+        aria-label={zhCN.meetings.search}
         className="flex gap-2"
         role="search"
       >
         <input name="filter" type="hidden" value={state.filter} />
         <input name="sort" type="hidden" value={state.sort} />
         <label className="relative flex-1">
-          <span className="sr-only">Search meetings</span>
+          <span className="sr-only">{zhCN.meetings.search}</span>
           <Search
             className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
             aria-hidden="true"
           />
           <input
-            aria-label="Search meetings"
+            aria-label={zhCN.meetings.search}
             className="border-input bg-background h-10 w-full rounded-md border pr-3 pl-9 text-sm"
             defaultValue={state.q}
             name="q"
-            placeholder="Search by title"
+            placeholder={zhCN.meetings.searchByTitle}
             type="search"
           />
         </label>
@@ -41,11 +42,11 @@ export function MeetingListControls({ state }: { state: MeetingListState }) {
           className={buttonVariants({ variant: "secondary" })}
           type="submit"
         >
-          Search
+          {zhCN.meetings.search}
         </button>
       </form>
       <div
-        aria-label="Meeting status"
+        aria-label={zhCN.meetings.status}
         className="bg-muted flex h-10 rounded-md p-1"
       >
         {(["active", "archived"] as const).map((filter) => (
@@ -58,16 +59,18 @@ export function MeetingListControls({ state }: { state: MeetingListState }) {
             href={buildMeetingListHref(state, { filter })}
             key={filter}
           >
-            {filter === "active" ? "Active" : "Archived"}
+            {filter === "active"
+              ? zhCN.meetings.active
+              : zhCN.meetings.archived}
           </a>
         ))}
       </div>
       <div className="flex gap-2">
         <label className="sr-only" htmlFor="meeting-sort">
-          Sort meetings
+          {zhCN.meetings.sort}
         </label>
         <select
-          aria-label="Sort meetings"
+          aria-label={zhCN.meetings.sort}
           className="border-input bg-background h-10 rounded-md border px-3 text-sm"
           id="meeting-sort"
           onChange={(event) =>
@@ -79,14 +82,14 @@ export function MeetingListControls({ state }: { state: MeetingListState }) {
           }
           value={state.sort}
         >
-          <option value="date-desc">Newest first</option>
-          <option value="date-asc">Oldest first</option>
-          <option value="title-asc">Title A-Z</option>
-          <option value="title-desc">Title Z-A</option>
+          <option value="date-desc">{zhCN.meetings.newest}</option>
+          <option value="date-asc">{zhCN.meetings.oldest}</option>
+          <option value="title-asc">{zhCN.meetings.titleAsc}</option>
+          <option value="title-desc">{zhCN.meetings.titleDesc}</option>
         </select>
         <Link className={buttonVariants()} href="/meetings/new">
           <Plus className="size-4" aria-hidden="true" />
-          New meeting
+          {zhCN.meetings.create}
         </Link>
       </div>
     </div>

@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
+import { t, zhCN } from "@/shared/i18n/zh-CN";
 
 export function WelcomeBanner({ userName }: { userName: string }) {
   return (
@@ -12,16 +13,16 @@ export function WelcomeBanner({ userName }: { userName: string }) {
     >
       <div className="max-w-2xl">
         <p className="text-accent-foreground text-sm font-medium">
-          Wednesday, July 15
+          {zhCN.dashboard.currentDate}
         </p>
         <h1
           className="mt-2 text-2xl leading-tight font-semibold sm:text-[28px]"
           id="dashboard-welcome-title"
         >
-          Good morning, {userName}
+          {t("dashboard", "greeting", { name: userName })}
         </h1>
         <p className="text-muted-foreground mt-2 text-sm leading-6 sm:text-base">
-          Your meetings are organized and ready for review.
+          {zhCN.dashboard.welcomeDescription}
         </p>
       </div>
 
@@ -31,13 +32,13 @@ export function WelcomeBanner({ userName }: { userName: string }) {
           href="/meetings/new"
         >
           <CalendarPlus aria-hidden="true" className="size-4" />
-          New meeting
+          {zhCN.dashboard.newMeeting}
         </Link>
         <Link
           className={buttonVariants({ size: "lg", variant: "outline" })}
           href="/meetings"
         >
-          View meetings
+          {zhCN.dashboard.viewMeetings}
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </div>

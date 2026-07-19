@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 const icons: Record<QuickAction["icon"], LucideIcon> = {
   create: CalendarPlus,
@@ -32,9 +33,9 @@ export function QuickActions({
   return (
     <Card id="quick-actions">
       <CardHeader className="px-5 pt-5 sm:px-6">
-        <CardTitle as="h2">Quick actions</CardTitle>
+        <CardTitle as="h2">{zhCN.dashboard.quickActions}</CardTitle>
         <CardDescription>
-          Move directly to common dashboard tasks.
+          {zhCN.dashboard.quickActionsDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-3 pt-3 pb-3 sm:px-4">

@@ -7,8 +7,8 @@ describe("DashboardLoading", () => {
   it("announces loading while keeping decorative skeletons hidden", () => {
     render(<DashboardLoading />);
 
-    const status = screen.getByRole("status", { name: "Loading dashboard" });
-    expect(status).toHaveTextContent("Loading dashboard");
+    const status = screen.getByRole("status", { name: "正在加载工作台" });
+    expect(status).toHaveTextContent("正在加载工作台");
     expect(within(status).getAllByTestId("skeleton").length).toBeGreaterThan(8);
   });
 

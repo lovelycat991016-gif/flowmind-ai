@@ -4,20 +4,17 @@ import { mapAuthError } from "./auth-errors";
 
 describe("mapAuthError", () => {
   it.each([
-    ["Invalid login credentials", "Email or password is incorrect."],
-    ["Email not confirmed", "Confirm your email before signing in."],
-    ["User already registered", "An account already exists for this email."],
-    [
-      "Password should be at least 8 characters",
-      "Password must be at least 8 characters.",
-    ],
+    ["Invalid login credentials", "邮箱或密码不正确。"],
+    ["Email not confirmed", "请先验证邮箱后再登录。"],
+    ["User already registered", "该邮箱已注册账号。"],
+    ["Password should be at least 8 characters", "密码长度至少为 8 个字符。"],
   ])("maps %s to a safe message", (providerMessage, expected) => {
     expect(mapAuthError(providerMessage)).toBe(expected);
   });
 
   it("does not expose an unknown provider error", () => {
     expect(mapAuthError("database connection string leaked")).toBe(
-      "Authentication failed. Please try again.",
+      "身份验证失败，请重试。",
     );
   });
 });

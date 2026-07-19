@@ -16,22 +16,22 @@ describe("MeetingListControls", () => {
   it("renders approved search, filter, sort, and create controls", () => {
     render(<MeetingListControls state={state} />);
 
-    expect(
-      screen.getByRole("searchbox", { name: "Search meetings" }),
-    ).toHaveValue("weekly");
-    expect(screen.getByRole("link", { name: "Active" })).toHaveAttribute(
+    expect(screen.getByRole("searchbox", { name: "搜索会议" })).toHaveValue(
+      "weekly",
+    );
+    expect(screen.getByRole("link", { name: "进行中" })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    expect(screen.getByRole("link", { name: "Archived" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "已归档" })).toHaveAttribute(
       "href",
       expect.stringContaining("filter=archived"),
     );
-    expect(screen.getByRole("combobox", { name: "Sort meetings" })).toHaveValue(
+    expect(screen.getByRole("combobox", { name: "排序方式" })).toHaveValue(
       "date-desc",
     );
     expect(screen.getAllByRole("option")).toHaveLength(4);
-    expect(screen.getByRole("link", { name: "New meeting" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "新建会议" })).toHaveAttribute(
       "href",
       "/meetings/new",
     );
@@ -40,9 +40,10 @@ describe("MeetingListControls", () => {
   it("resets page state when submitting a title search", () => {
     render(<MeetingListControls state={state} />);
 
-    expect(
-      screen.getByRole("search", { name: "Search meetings" }),
-    ).toHaveAttribute("action", "/meetings");
+    expect(screen.getByRole("search", { name: "搜索会议" })).toHaveAttribute(
+      "action",
+      "/meetings",
+    );
     expect(screen.getByDisplayValue("active")).toHaveAttribute(
       "name",
       "filter",

@@ -1,19 +1,20 @@
 import { z } from "zod";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export const meetingTitleSchema = z
   .string()
   .trim()
-  .min(1, "Enter a meeting title.")
-  .max(200, "Meeting titles must be 200 characters or fewer.");
+  .min(1, zhCN.meetings.validation.titleRequired)
+  .max(200, zhCN.meetings.validation.titleTooLong);
 
-export const meetingIdSchema = z.uuid("The meeting identifier is invalid.");
+export const meetingIdSchema = z.uuid(zhCN.meetings.validation.idInvalid);
 
 const localDateSchema = z
   .string()
-  .min(1, "Choose a meeting date and time.")
+  .min(1, zhCN.meetings.validation.dateRequired)
   .regex(
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/,
-    "Choose a valid meeting date and time.",
+    zhCN.meetings.validation.dateInvalid,
   );
 
 const timezoneOffsetSchema = z.coerce.number().int().min(-840).max(840);
@@ -30,7 +31,7 @@ export const createMeetingSchema = z
     if (!Number.isFinite(localAsUtc)) {
       context.addIssue({
         code: "custom",
-        message: "Choose a valid meeting date and time.",
+        message: zhCN.meetings.validation.dateInvalid,
         path: ["meetingDateLocal"],
       });
       return z.NEVER;

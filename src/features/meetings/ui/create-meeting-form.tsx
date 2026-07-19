@@ -10,6 +10,7 @@ import {
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export function CreateMeetingForm({
   initialState = INITIAL_MEETING_ACTION_STATE,
@@ -34,7 +35,7 @@ export function CreateMeetingForm({
         defaultValue="0"
       />
       <div className="space-y-2">
-        <Label htmlFor="meeting-title">Title</Label>
+        <Label htmlFor="meeting-title">{zhCN.meetings.titleLabel}</Label>
         <Input
           aria-describedby={state.fieldErrors.title ? "title-error" : undefined}
           defaultValue={state.values.title}
@@ -50,7 +51,7 @@ export function CreateMeetingForm({
         ) : null}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="meeting-date">Meeting date and time</Label>
+        <Label htmlFor="meeting-date">{zhCN.meetings.dateLabel}</Label>
         <Input
           aria-describedby={
             state.fieldErrors.meetingDateLocal ? "date-error" : undefined
@@ -74,13 +75,13 @@ export function CreateMeetingForm({
       ) : null}
       <div className="flex gap-3">
         <Button disabled={pending} type="submit">
-          {pending ? "Creating..." : "Create meeting"}
+          {pending ? zhCN.meetings.creating : zhCN.meetings.create}
         </Button>
         <Link
           className="inline-flex h-10 items-center px-3 text-sm font-medium"
           href="/meetings"
         >
-          Cancel
+          {zhCN.common.cancel}
         </Link>
       </div>
     </form>

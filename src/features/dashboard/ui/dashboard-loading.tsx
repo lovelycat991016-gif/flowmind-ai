@@ -1,14 +1,15 @@
 import { Card, CardContent } from "@/shared/ui/card";
 import { Skeleton } from "@/shared/ui/skeleton";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export function DashboardLoading() {
   return (
     <div
-      aria-label="Loading dashboard"
+      aria-label={zhCN.dashboard.loading}
       className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10"
       role="status"
     >
-      <span className="sr-only">Loading dashboard</span>
+      <span className="sr-only">{zhCN.dashboard.loading}</span>
 
       <div className="bg-accent min-h-44 rounded-lg border px-5 py-6 sm:px-7">
         <Skeleton className="h-4 w-32" />

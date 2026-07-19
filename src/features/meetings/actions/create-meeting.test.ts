@@ -98,7 +98,7 @@ describe("createMeetingAction", () => {
       }),
     );
 
-    expect(state.message).toBe("We couldn't create this meeting. Try again.");
+    expect(state.message).toBe("暂时无法创建会议，请重试。");
     expect(state.message).not.toContain("secret detail");
   });
 });

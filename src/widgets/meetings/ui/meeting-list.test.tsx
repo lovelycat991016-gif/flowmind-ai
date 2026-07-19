@@ -37,11 +37,11 @@ describe("MeetingList", () => {
       "href",
       "/meetings/00000000-0000-4000-8000-000000000000",
     );
-    expect(screen.getByRole("link", { name: "Previous page" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "上一页" })).toHaveAttribute(
       "href",
       expect.not.stringContaining("page=2"),
     );
-    expect(screen.getByRole("link", { name: "Next page" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "下一页" })).toHaveAttribute(
       "href",
       expect.stringContaining("page=3"),
     );
@@ -56,7 +56,7 @@ describe("MeetingList", () => {
       />,
     );
 
-    expect(screen.getByText("Archived")).toBeVisible();
+    expect(screen.getByText("已归档")).toBeVisible();
   });
 
   it("distinguishes empty lifecycle and search results", () => {
@@ -67,7 +67,7 @@ describe("MeetingList", () => {
         state={{ ...activeState, page: 1 }}
       />,
     );
-    expect(screen.getByText("No active meetings yet")).toBeVisible();
+    expect(screen.getByText("暂无进行中的会议")).toBeVisible();
 
     rerender(
       <MeetingList
@@ -76,7 +76,7 @@ describe("MeetingList", () => {
         state={{ ...activeState, filter: "archived", page: 1 }}
       />,
     );
-    expect(screen.getByText("No archived meetings")).toBeVisible();
+    expect(screen.getByText("暂无已归档会议")).toBeVisible();
 
     rerender(
       <MeetingList
@@ -85,6 +85,6 @@ describe("MeetingList", () => {
         state={{ ...activeState, q: "missing", page: 1 }}
       />,
     );
-    expect(screen.getByText("No meetings match your search")).toBeVisible();
+    expect(screen.getByText("没有找到匹配的会议")).toBeVisible();
   });
 });

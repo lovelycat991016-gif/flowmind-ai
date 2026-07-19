@@ -18,6 +18,9 @@
 # local visual design sessions
 .superpowers/
 
+# Supabase CLI local state
+supabase/.temp/
+
 # operating system and editors
 .DS_Store
 Thumbs.db

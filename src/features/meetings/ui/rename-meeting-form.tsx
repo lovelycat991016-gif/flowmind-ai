@@ -6,6 +6,7 @@ import { INITIAL_MEETING_ACTION_STATE } from "@/features/meetings/actions/meetin
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export function RenameMeetingForm({
   meetingId,
@@ -20,10 +21,14 @@ export function RenameMeetingForm({
   });
 
   return (
-    <form action={action} aria-label="Rename meeting" className="space-y-3">
+    <form
+      action={action}
+      aria-label={zhCN.meetings.rename}
+      className="space-y-3"
+    >
       <input name="id" type="hidden" value={meetingId} />
       <div className="space-y-2">
-        <Label htmlFor="meeting-title">Meeting title</Label>
+        <Label htmlFor="meeting-title">{zhCN.meetings.titleLabel}</Label>
         <Input
           aria-describedby={
             state.fieldErrors.title ? "rename-title-error" : undefined
@@ -57,7 +62,7 @@ export function RenameMeetingForm({
         </p>
       ) : null}
       <Button disabled={pending} type="submit">
-        {pending ? "Saving..." : "Rename meeting"}
+        {pending ? zhCN.meetings.renaming : zhCN.meetings.rename}
       </Button>
     </form>
   );

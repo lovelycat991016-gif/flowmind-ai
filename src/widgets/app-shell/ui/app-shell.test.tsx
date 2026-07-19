@@ -8,10 +8,10 @@ vi.mock("next/navigation", () => ({ usePathname: () => "/meetings" }));
 function renderShell() {
   return render(
     <AppShell
-      userActions={<button type="button">Sign out</button>}
+      userActions={<button type="button">退出登录</button>}
       userEmail="alex@flowmind.ai"
     >
-      <h1>Dashboard content</h1>
+      <h1>工作台内容</h1>
     </AppShell>,
   );
 }
@@ -21,69 +21,62 @@ describe("AppShell", () => {
     renderShell();
 
     const navigation = screen.getAllByRole("navigation", {
-      name: "Primary",
+      name: "工作区",
     })[0]!;
-    expect(navigation).toHaveTextContent("Dashboard");
-    expect(navigation).toHaveTextContent("Meetings");
-    expect(navigation).toHaveTextContent("Summaries");
-    expect(navigation).toHaveTextContent("Action Items");
-    expect(navigation).toHaveTextContent("Settings");
+    expect(navigation).toHaveTextContent("工作台");
+    expect(navigation).toHaveTextContent("会议");
+    expect(navigation).toHaveTextContent("摘要");
+    expect(navigation).toHaveTextContent("行动项");
+    expect(navigation).toHaveTextContent("设置");
+    expect(screen.getAllByRole("link", { name: "会议" })[0]).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(
-      screen.getAllByRole("link", { name: "Meetings" })[0],
-    ).toHaveAttribute("aria-current", "page");
-    expect(
-      screen.getAllByRole("link", { name: "Dashboard" })[0],
+      screen.getAllByRole("link", { name: "工作台" })[0],
     ).not.toHaveAttribute("aria-current");
   });
 
   it("marks reserved navigation and header utilities unavailable", () => {
     renderShell();
 
-    expect(
-      screen.getAllByRole("button", { name: "Summaries" })[0],
-    ).toBeDisabled();
-    expect(
-      screen.getAllByRole("button", { name: "Action Items" })[0],
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("searchbox", { name: "Search meetings" }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("button", { name: "Notifications" }),
-    ).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "摘要" })[0]).toBeDisabled();
+    expect(screen.getAllByRole("button", { name: "行动项" })[0]).toBeDisabled();
+    expect(screen.getByRole("searchbox", { name: "搜索会议" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "通知" })).toBeDisabled();
   });
 
   it("shows the authenticated identity in the user menu", () => {
     renderShell();
 
-    fireEvent.click(screen.getByRole("button", { name: "Open user menu" }));
+    fireEvent.click(screen.getByRole("button", { name: "打开用户菜单" }));
     expect(screen.getByText("alex@flowmind.ai")).toBeInTheDocument();
-    expect(screen.getByRole("menu", { name: "User menu" })).toBeVisible();
+    expect(screen.getByRole("menu", { name: "打开用户菜单" })).toBeVisible();
   });
 
   it("opens and closes the mobile navigation with focus return", () => {
     renderShell();
-    const trigger = screen.getByRole("button", { name: "Open navigation" });
+    const trigger = screen.getByRole("button", { name: "打开导航" });
 
     fireEvent.click(trigger);
-    expect(screen.getByRole("dialog", { name: "Navigation" })).toBeVisible();
+    expect(screen.getByRole("dialog", { name: "工作区" })).toBeVisible();
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(
-      screen.queryByRole("dialog", { name: "Navigation" }),
+      screen.queryByRole("dialog", { name: "工作区" }),
     ).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
   });
 
   it("keeps keyboard focus inside the mobile navigation dialog", () => {
     renderShell();
-    fireEvent.click(screen.getByRole("button", { name: "Open navigation" }));
+    fireEvent.click(screen.getByRole("button", { name: "打开导航" }));
 
     const dashboardLink = screen.getAllByRole("link", {
-      name: "Dashboard",
+      name: "工作台",
     })[1]!;
     const closeButton = screen.getByRole("button", {
-      name: "Close navigation",
+      name: "关闭导航",
     });
 
     closeButton.focus();

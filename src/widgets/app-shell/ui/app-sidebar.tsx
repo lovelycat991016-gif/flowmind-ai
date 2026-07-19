@@ -2,6 +2,7 @@ import { AudioLines } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { primaryNavigation } from "@/widgets/app-shell/model/navigation";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 type AppSidebarProps = {
   mobile?: boolean;
@@ -21,11 +22,11 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
             mobile ? "font-semibold" : "hidden font-semibold xl:inline"
           }
         >
-          FlowMind AI
+          {zhCN.brand.name}
         </span>
       </div>
 
-      <nav aria-label="Primary" className="flex-1 px-3 py-5">
+      <nav aria-label={zhCN.navigation.workspace} className="flex-1 px-3 py-5">
         <ul className="space-y-1">
           {primaryNavigation.map((item) => {
             const active = item.href
@@ -55,7 +56,7 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
                         : "text-sidebar-muted hidden text-[11px] xl:inline"
                     }
                   >
-                    Soon
+                    {zhCN.navigation.comingSoon}
                   </span>
                 ) : null}
               </>
@@ -91,7 +92,7 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
                     aria-label={item.label}
                     className={className}
                     disabled
-                    title={`${item.label} is not available yet`}
+                    title={`${item.label}${zhCN.navigation.notificationsUnavailable}`}
                     type="button"
                   >
                     {content}
@@ -104,7 +105,9 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
       </nav>
 
       <div className="text-sidebar-muted border-t border-white/10 px-5 py-4 text-xs">
-        <span className={mobile ? "" : "hidden xl:inline"}>FlowMind v0.2</span>
+        <span className={mobile ? "" : "hidden xl:inline"}>
+          {zhCN.brand.version}
+        </span>
         <span
           aria-hidden="true"
           className={mobile ? "hidden" : "block text-center xl:hidden"}

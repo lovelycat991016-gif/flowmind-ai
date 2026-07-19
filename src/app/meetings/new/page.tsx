@@ -8,8 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/ui/card";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
-export const metadata: Metadata = { title: "New meeting" };
+export const metadata: Metadata = { title: zhCN.meetings.create };
 
 export default function NewMeetingPage() {
   return (
@@ -18,14 +19,12 @@ export default function NewMeetingPage() {
         className="text-muted-foreground text-sm hover:underline"
         href="/meetings"
       >
-        Back to meetings
+        {zhCN.meetings.backToMeetings}
       </Link>
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle as="h1">Create meeting</CardTitle>
-          <CardDescription>
-            Add the meeting title and when it takes place.
-          </CardDescription>
+          <CardTitle as="h1">{zhCN.meetings.create}</CardTitle>
+          <CardDescription>{zhCN.meetings.createDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <CreateMeetingForm />

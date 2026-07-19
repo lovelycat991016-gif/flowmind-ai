@@ -7,6 +7,7 @@ import type { MeetingActionState } from "./meeting-action-state";
 import { firstFieldErrors } from "./meeting-action-state";
 import { createMeetingSchema } from "@/features/meetings/schemas/meeting-input";
 import { createClient } from "@/shared/lib/supabase/server";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export async function createMeetingAction(
   _previous: MeetingActionState,
@@ -23,7 +24,7 @@ export async function createMeetingAction(
   if (!result.success) {
     return {
       status: "error",
-      message: "Check the highlighted fields.",
+      message: zhCN.meetings.validation.checkFields,
       fieldErrors: firstFieldErrors(result.error.issues),
       values,
     };
@@ -43,7 +44,7 @@ export async function createMeetingAction(
   if (error || !data) {
     return {
       status: "error",
-      message: "We couldn't create this meeting. Try again.",
+      message: zhCN.meetings.validation.createFailed,
       fieldErrors: {},
       values,
     };

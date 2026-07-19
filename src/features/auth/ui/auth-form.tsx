@@ -12,6 +12,7 @@ import { Alert } from "@/shared/ui/alert";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 type AuthMode = "login" | "signup" | "forgot-password" | "reset-password";
 
@@ -22,10 +23,10 @@ type AuthFormProps = {
 };
 
 const submitLabels: Record<AuthMode, string> = {
-  login: "Sign in",
-  signup: "Create account",
-  "forgot-password": "Send reset link",
-  "reset-password": "Update password",
+  login: zhCN.auth.signIn,
+  signup: zhCN.auth.createAccount,
+  "forgot-password": zhCN.auth.sendReset,
+  "reset-password": zhCN.auth.updatePassword,
 };
 
 function SubmitButton({ mode }: { mode: AuthMode }) {
@@ -33,7 +34,7 @@ function SubmitButton({ mode }: { mode: AuthMode }) {
 
   return (
     <Button className="w-full" disabled={pending} size="lg" type="submit">
-      {pending ? "Please wait..." : submitLabels[mode]}
+      {pending ? zhCN.auth.waiting : submitLabels[mode]}
     </Button>
   );
 }
@@ -56,12 +57,12 @@ export function AuthForm({ action, mode, nextPath }: AuthFormProps) {
 
       {asksForEmail ? (
         <div className="space-y-2">
-          <Label htmlFor="email">Email address</Label>
+          <Label htmlFor="email">{zhCN.auth.email}</Label>
           <Input
             autoComplete="email"
             id="email"
             name="email"
-            placeholder="you@company.com"
+            placeholder={zhCN.auth.emailPlaceholder}
             required
             type="email"
           />
@@ -72,14 +73,16 @@ export function AuthForm({ action, mode, nextPath }: AuthFormProps) {
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-4">
             <Label htmlFor="password">
-              {mode === "reset-password" ? "New password" : "Password"}
+              {mode === "reset-password"
+                ? zhCN.auth.newPassword
+                : zhCN.auth.password}
             </Label>
             {mode === "login" ? (
               <Link
                 className="text-primary text-sm font-medium hover:underline"
                 href="/forgot-password"
               >
-                Forgot password?
+                {zhCN.auth.forgotPassword}
               </Link>
             ) : null}
           </div>
@@ -98,7 +101,7 @@ export function AuthForm({ action, mode, nextPath }: AuthFormProps) {
 
       {asksForConfirmation ? (
         <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm password</Label>
+          <Label htmlFor="confirmPassword">{zhCN.auth.confirmPassword}</Label>
           <Input
             autoComplete="new-password"
             id="confirmPassword"

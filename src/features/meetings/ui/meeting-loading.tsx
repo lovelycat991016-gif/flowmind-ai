@@ -1,7 +1,11 @@
 import { Skeleton } from "@/shared/ui/skeleton";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export function MeetingLoading({ variant }: { variant: "list" | "detail" }) {
-  const label = variant === "list" ? "Loading meetings" : "Loading meeting";
+  const label =
+    variant === "list"
+      ? zhCN.meetings.loadingList
+      : zhCN.meetings.loadingDetail;
   return (
     <div
       aria-busy="true"

@@ -15,11 +15,11 @@ describe("DeleteMeetingDialog", () => {
         title="Product weekly"
       />,
     );
-    const trigger = screen.getByRole("button", { name: "Delete meeting" });
+    const trigger = screen.getByRole("button", { name: "删除会议" });
     fireEvent.click(trigger);
     expect(screen.getByRole("dialog")).toHaveTextContent("Product weekly");
     expect(
-      screen.getByRole("button", { name: "Delete permanently" }),
+      screen.getByRole("button", { name: "永久删除" }),
     ).toBeInTheDocument();
   });
 
@@ -30,7 +30,7 @@ describe("DeleteMeetingDialog", () => {
         title="Product weekly"
       />,
     );
-    const trigger = screen.getByRole("button", { name: "Delete meeting" });
+    const trigger = screen.getByRole("button", { name: "删除会议" });
     fireEvent.click(trigger);
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

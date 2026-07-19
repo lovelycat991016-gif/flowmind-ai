@@ -9,7 +9,7 @@ vi.mock("@/features/meetings/ui/rename-meeting-form", () => ({
     meetingId: string;
     title: string;
   }) => (
-    <form aria-label="Rename meeting">
+    <form aria-label="重命名会议">
       <input name="id" value={meetingId} readOnly />
       <input name="title" value={title} readOnly />
     </form>
@@ -34,16 +34,16 @@ describe("MeetingDetail", () => {
     expect(
       screen.getByRole("heading", { name: "Product weekly" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText(/Jul 17, 2026/i)).toBeInTheDocument();
+    expect(screen.getByText("进行中")).toBeInTheDocument();
+    expect(screen.getByText(/2026年7月17日/i)).toBeInTheDocument();
     expect(
-      screen.getByRole("form", { name: "Rename meeting" }),
+      screen.getByRole("form", { name: "重命名会议" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Archive meeting" }),
+      screen.getByRole("button", { name: "归档会议" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Delete meeting" }),
+      screen.getByRole("button", { name: "删除会议" }),
     ).toBeInTheDocument();
   });
 });

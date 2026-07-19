@@ -5,8 +5,9 @@ import { signInAction } from "@/features/auth/actions/auth-actions";
 import { AuthForm } from "@/features/auth/ui/auth-form";
 import { AuthPanel } from "@/features/auth/ui/auth-panel";
 import { Alert } from "@/shared/ui/alert";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const metadata: Metadata = { title: zhCN.auth.signIn };
 
 type LoginPageProps = {
   searchParams: Promise<{ error?: string; next?: string }>;
@@ -17,24 +18,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <AuthPanel
-      description="Use your work email to access your meeting workspace."
+      description={zhCN.auth.loginDescription}
       footer={
         <>
-          New to FlowMind?{" "}
+          {zhCN.auth.noAccount}{" "}
           <Link
             className="text-primary font-medium hover:underline"
             href="/signup"
           >
-            Create an account
+            {zhCN.auth.createAccount}
           </Link>
         </>
       }
-      title="Welcome back"
+      title={zhCN.auth.loginTitle}
     >
       {params.error === "callback" ? (
-        <Alert className="mb-5">
-          The sign-in link is invalid or expired. Request a new one.
-        </Alert>
+        <Alert className="mb-5">{zhCN.auth.callbackInvalid}</Alert>
       ) : null}
       <AuthForm action={signInAction} mode="login" nextPath={params.next} />
     </AuthPanel>

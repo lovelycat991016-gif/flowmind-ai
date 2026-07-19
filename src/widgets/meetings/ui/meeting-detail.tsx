@@ -9,6 +9,7 @@ import { DeleteMeetingDialog } from "@/features/meetings/ui/delete-meeting-dialo
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { zhCN } from "@/shared/i18n/zh-CN";
 
 export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
   const isArchived = Boolean(meeting.archivedAt);
@@ -18,7 +19,7 @@ export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
         className="text-muted-foreground text-sm hover:underline"
         href="/meetings"
       >
-        Back to meetings
+        {zhCN.meetings.backToMeetings}
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
@@ -31,12 +32,12 @@ export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
           </p>
         </div>
         <Badge variant={isArchived ? "neutral" : "success"}>
-          {isArchived ? "Archived" : "Active"}
+          {isArchived ? zhCN.meetings.archived : zhCN.meetings.active}
         </Badge>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle as="h2">Edit meeting</CardTitle>
+          <CardTitle as="h2">{zhCN.meetings.edit}</CardTitle>
         </CardHeader>
         <CardContent>
           <RenameMeetingForm meetingId={meeting.id} title={meeting.title} />
@@ -44,7 +45,7 @@ export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle as="h2">Meeting lifecycle</CardTitle>
+          <CardTitle as="h2">{zhCN.meetings.lifecycle}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <form
@@ -52,7 +53,7 @@ export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
           >
             <input name="id" type="hidden" value={meeting.id} />
             <Button type="submit" variant="outline">
-              {isArchived ? "Restore meeting" : "Archive meeting"}
+              {isArchived ? zhCN.meetings.restore : zhCN.meetings.archive}
             </Button>
           </form>
           <DeleteMeetingDialog meetingId={meeting.id} title={meeting.title} />

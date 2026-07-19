@@ -12,12 +12,13 @@ import {
 } from "@/features/auth/model/auth-schema";
 import type { AuthFormState } from "@/features/auth/model/auth-state";
 import { getPublicEnv } from "@/shared/config/env";
+import { zhCN } from "@/shared/i18n/zh-CN";
 import { createClient } from "@/shared/lib/supabase/server";
 
 function firstIssueMessage(error: {
   issues: ReadonlyArray<{ message: string }>;
 }) {
-  return error.issues[0]?.message ?? "Check the form and try again.";
+  return error.issues[0]?.message ?? zhCN.auth.formFallback;
 }
 
 export async function signInAction(
@@ -66,13 +67,13 @@ export async function signUpAction(
   if (data.user && data.user.identities?.length === 0) {
     return {
       status: "error",
-      message: "An account already exists for this email.",
+      message: zhCN.auth.alreadyRegistered,
     };
   }
 
   return {
     status: "success",
-    message: "Check your email to confirm your account.",
+    message: zhCN.auth.accountConfirmationSent,
   };
 }
 
@@ -101,7 +102,7 @@ export async function requestPasswordResetAction(
 
   return {
     status: "success",
-    message: "If an account exists for that email, a reset link is on its way.",
+    message: zhCN.auth.resetLinkSent,
   };
 }
 
@@ -124,7 +125,7 @@ export async function updatePasswordAction(
     return { status: "error", message: mapAuthError(error.message) };
   }
 
-  return { status: "success", message: "Your password has been updated." };
+  return { status: "success", message: zhCN.auth.passwordUpdated };
 }
 
 export async function signOutAction() {
