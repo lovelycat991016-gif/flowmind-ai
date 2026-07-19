@@ -2,6 +2,7 @@ import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import type { MeetingDetail as MeetingDetailModel } from "@/entities/meeting/model/meeting";
 import type { Recording } from "@/entities/recording/model/recording";
+import type { ProcessingJob } from "@/entities/processing-job/model/processing-job";
 import { formatMeetingDate } from "@/entities/meeting/model/meeting";
 import { RenameMeetingForm } from "@/features/meetings/ui/rename-meeting-form";
 import { archiveMeetingAction } from "@/features/meetings/actions/archive-meeting";
@@ -15,9 +16,11 @@ import { MeetingRecordingSection } from "./meeting-recording-section";
 
 export function MeetingDetail({
   meeting,
+  processingJob = null,
   recording = null,
 }: {
   meeting: MeetingDetailModel;
+  processingJob?: ProcessingJob | null;
   recording?: Recording | null;
 }) {
   const isArchived = Boolean(meeting.archivedAt);
@@ -54,6 +57,7 @@ export function MeetingDetail({
       <MeetingRecordingSection
         archived={isArchived}
         meetingId={meeting.id}
+        processingJob={processingJob}
         recording={recording}
       />
       <Card>

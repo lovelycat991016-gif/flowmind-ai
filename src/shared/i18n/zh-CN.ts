@@ -126,6 +126,14 @@ export const zhCN = {
     archivedUnavailable: "归档会议暂不支持上传录音。",
     retryDescription: "请选择新的录音文件以重试上传。",
   },
+  processingJobs: {
+    title: "AI 处理状态",
+    queued: "等待AI处理",
+    running: "正在处理中",
+    completed: "处理完成",
+    failed: "处理失败",
+    cancelled: "已取消",
+  },
   auth: {
     email: "邮箱地址",
     emailPlaceholder: "name@example.com",

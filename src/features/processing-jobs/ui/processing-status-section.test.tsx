@@ -1,0 +1,62 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+
+import { ProcessingStatusSection } from "./processing-status-section";
+
+const recording = {
+  id: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
+  meetingId: "cfb378e0-88e2-4cbf-946f-a8ca8f6df536",
+  userId: "2c15dfe2-ea8c-420e-85ad-e85901974931",
+  storageBucket: "recordings",
+  storagePath: "owner/meeting/recording.webm",
+  originalFilename: "weekly-review.webm",
+  mimeType: "audio/webm",
+  fileSizeBytes: 1024,
+  status: "uploaded" as const,
+  uploadedAt: "2026-07-19T08:00:00.000Z",
+  createdAt: "2026-07-19T07:59:00.000Z",
+  updatedAt: "2026-07-19T08:00:00.000Z",
+};
+
+const processingJob = {
+  id: "911a4a76-8622-49c9-b3d1-a07c55514f91",
+  recordingId: recording.id,
+  meetingId: recording.meetingId,
+  userId: recording.userId,
+  status: "queued" as const,
+  attemptCount: 0,
+  createdAt: "2026-07-19T08:00:00.000Z",
+  startedAt: null,
+  completedAt: null,
+  errorMessage: null,
+};
+
+describe("ProcessingStatusSection", () => {
+  it("renders the processing status for an existing recording", () => {
+    render(
+      <ProcessingStatusSection
+        processingJob={processingJob}
+        recording={recording}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "AI 处理状态" })).toBeVisible();
+    expect(
+      screen.getByRole("status", { name: "AI 处理状态：等待AI处理" }),
+    ).toBeVisible();
+  });
+
+  it("hides the processing section when no recording exists", () => {
+    render(
+      <ProcessingStatusSection
+        processingJob={processingJob}
+        recording={null}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("heading", { name: "AI 处理状态" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});

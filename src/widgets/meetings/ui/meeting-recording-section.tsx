@@ -1,6 +1,8 @@
 import type { Recording } from "@/entities/recording/model/recording";
+import type { ProcessingJob } from "@/entities/processing-job/model/processing-job";
 import { formatRecordingFileSize } from "@/entities/recording/model/recording";
 import { formatMeetingDate } from "@/entities/meeting/model/meeting";
+import { ProcessingStatusSection } from "@/features/processing-jobs/ui/processing-status-section";
 import { RecordingUploadForm } from "@/features/recordings/ui/recording-upload-form";
 import { Badge } from "@/shared/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
@@ -9,6 +11,7 @@ import { zhCN } from "@/shared/i18n/zh-CN";
 type MeetingRecordingSectionProps = {
   archived: boolean;
   meetingId: string;
+  processingJob?: ProcessingJob | null;
   recording: Recording | null;
 };
 
@@ -49,6 +52,7 @@ function RecordingMetadata({ recording }: { recording: Recording }) {
 export function MeetingRecordingSection({
   archived,
   meetingId,
+  processingJob = null,
   recording,
 }: MeetingRecordingSectionProps) {
   const canUpload =
@@ -75,6 +79,10 @@ export function MeetingRecordingSection({
         ) : (
           <RecordingMetadata recording={recording} />
         )}
+        <ProcessingStatusSection
+          processingJob={processingJob}
+          recording={recording}
+        />
 
         {recording?.status === "failed" ? (
           <p className="text-destructive text-sm" role="alert">

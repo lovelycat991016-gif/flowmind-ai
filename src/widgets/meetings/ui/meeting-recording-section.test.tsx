@@ -71,6 +71,48 @@ describe("MeetingRecordingSection", () => {
     expect(screen.queryByLabelText("上传录音表单")).not.toBeInTheDocument();
   });
 
+  it("keeps archived meetings read-only while showing an existing processing status", () => {
+    render(
+      <MeetingRecordingSection
+        archived
+        meetingId={meetingId}
+        processingJob={{
+          id: "911a4a76-8622-49c9-b3d1-a07c55514f91",
+          recordingId: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
+          meetingId,
+          userId: "2c15dfe2-ea8c-420e-85ad-e85901974931",
+          status: "queued",
+          attemptCount: 0,
+          createdAt: "2026-07-19T08:00:00.000Z",
+          startedAt: null,
+          completedAt: null,
+          errorMessage: null,
+        }}
+        recording={{
+          id: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
+          meetingId,
+          userId: "2c15dfe2-ea8c-420e-85ad-e85901974931",
+          storageBucket: "recordings",
+          storagePath: "owner/meeting/recording.webm",
+          originalFilename: "weekly-review.webm",
+          mimeType: "audio/webm",
+          fileSizeBytes: 1024,
+          status: "uploaded",
+          uploadedAt: "2026-07-19T08:00:00.000Z",
+          createdAt: "2026-07-19T07:59:00.000Z",
+          updatedAt: "2026-07-19T08:00:00.000Z",
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("status", { name: "AI 处理状态：等待AI处理" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByLabelText("涓婁紶褰曢煶琛ㄥ崟"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a safe retry path for failed recordings", () => {
     render(
       <MeetingRecordingSection
