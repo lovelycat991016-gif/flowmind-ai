@@ -79,6 +79,18 @@ Sprint 6 delivers the bounded transcription pipeline:
 
 No summaries, action items, AI chat, FFmpeg, or audio chunking are introduced.
 
+## Sprint 7
+
+Sprint 7 adds the meeting-intelligence foundation:
+
+- Owner-isolated `meeting_intelligence` records with queued, running, completed, failed, and cancelled lifecycle states
+- Lease-protected service-role worker claiming and owner/lease-safe result or failure persistence
+- Provider-neutral structured-output boundary that validates summaries, action items, and decisions before storage
+- Owner-scoped Server Component reads that hide inaccessible or malformed intelligence results
+- Read-only meeting-detail states for completed, processing, unavailable, empty, and archived intelligence
+
+The MVP intentionally uses an injected provider transport in automated tests. A live LLM transport, production provider credentials, retry controls, editing, exports, AI chat, and knowledge search are not part of Sprint 7.
+
 ## Technology
 
 - Next.js 15 and React 19
@@ -100,7 +112,8 @@ src/
 |   |-- dashboard/               # Query-driven dashboard composition
 |   |-- meetings/                # Server actions, queries, schemas, and meeting UI
 |   |-- recordings/              # Recording actions, queries, schemas, and upload UI
-|   `-- transcription/           # Transcript queries, provider adapter, worker contracts, and UI
+|   |-- transcription/           # Transcript queries, provider adapter, worker contracts, and UI
+|   `-- meeting-intelligence/    # Intelligence schemas, queries, provider, worker, and read-only UI
 |-- shared/
 |   |-- config/                  # Validated public environment configuration
 |   |-- lib/supabase/            # Browser, server, and middleware Supabase adapters
@@ -142,7 +155,7 @@ docs/
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
    ```
 
-3. Apply `supabase/migrations/202607140001_create_profiles.sql`, `supabase/migrations/202607160001_create_meetings.sql`, and `supabase/migrations/202607190001_create_recordings.sql` through the Supabase CLI or SQL editor.
+3. Apply all migrations in filename order through the Supabase CLI or SQL editor, including profiles, meetings, recordings, processing jobs, transcription, worker leases, transcription execution, and meeting intelligence.
 
 4. In Supabase Auth URL configuration, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/callback` as a redirect URL.
 
@@ -203,6 +216,8 @@ Sprint 3 validation notes, including the pending browser screenshot limitation, 
 Sprint 4 upload validation and operational-risk notes are recorded in `docs/qa/sprint-4-audio-upload-qa.md`.
 
 Sprint 6 transcription worker and meeting-detail validation notes are recorded in `docs/qa/sprint-6-transcription-worker-qa.md`.
+
+Sprint 7 meeting-intelligence release verification and known limitations are recorded in `docs/qa/sprint-7-meeting-intelligence-qa.md`.
 
 ## Verification
 
