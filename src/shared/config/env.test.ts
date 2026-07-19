@@ -35,4 +35,26 @@ describe("parsePublicEnv", () => {
       }),
     ).toThrow("FlowMind environment configuration is invalid");
   });
+
+  it("rejects non-HTTPS public URLs in production", () => {
+    expect(() =>
+      parsePublicEnv({
+        NODE_ENV: "production",
+        NEXT_PUBLIC_APP_URL: "http://flowmind.example.com",
+        NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anonymous-key",
+      }),
+    ).toThrow("FlowMind environment configuration is invalid");
+  });
+
+  it("rejects server-only configuration passed to the public parser", () => {
+    expect(() =>
+      parsePublicEnv({
+        NEXT_PUBLIC_APP_URL: "https://flowmind.example.com",
+        NEXT_PUBLIC_SUPABASE_URL: "https://project.supabase.co",
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: "public-anonymous-key",
+        CRON_SECRET: "server-only-secret",
+      }),
+    ).toThrow("FlowMind environment configuration is invalid");
+  });
 });
