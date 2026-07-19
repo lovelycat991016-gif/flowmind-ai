@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getMeetingById } from "@/features/meetings/queries/get-meetings";
+import { getRecordingForMeeting } from "@/features/recordings/queries/get-recording-for-meeting";
 import { meetingIdSchema } from "@/features/meetings/schemas/meeting-input";
 import { MeetingDetail } from "@/widgets/meetings/ui/meeting-detail";
 import { zhCN } from "@/shared/i18n/zh-CN";
@@ -19,5 +20,6 @@ export default async function MeetingDetailPage({
   const meeting = await getMeetingById(parsed.data);
   if (!meeting) notFound();
 
-  return <MeetingDetail meeting={meeting} />;
+  const recording = await getRecordingForMeeting(meeting.id);
+  return <MeetingDetail meeting={meeting} recording={recording} />;
 }

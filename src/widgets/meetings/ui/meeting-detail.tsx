@@ -1,6 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import Link from "next/link";
 import type { MeetingDetail as MeetingDetailModel } from "@/entities/meeting/model/meeting";
+import type { Recording } from "@/entities/recording/model/recording";
 import { formatMeetingDate } from "@/entities/meeting/model/meeting";
 import { RenameMeetingForm } from "@/features/meetings/ui/rename-meeting-form";
 import { archiveMeetingAction } from "@/features/meetings/actions/archive-meeting";
@@ -10,8 +11,15 @@ import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
 import { zhCN } from "@/shared/i18n/zh-CN";
+import { MeetingRecordingSection } from "./meeting-recording-section";
 
-export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
+export function MeetingDetail({
+  meeting,
+  recording = null,
+}: {
+  meeting: MeetingDetailModel;
+  recording?: Recording | null;
+}) {
   const isArchived = Boolean(meeting.archivedAt);
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
@@ -43,6 +51,11 @@ export function MeetingDetail({ meeting }: { meeting: MeetingDetailModel }) {
           <RenameMeetingForm meetingId={meeting.id} title={meeting.title} />
         </CardContent>
       </Card>
+      <MeetingRecordingSection
+        archived={isArchived}
+        meetingId={meeting.id}
+        recording={recording}
+      />
       <Card>
         <CardHeader>
           <CardTitle as="h2">{zhCN.meetings.lifecycle}</CardTitle>
