@@ -14,10 +14,12 @@ vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 import { cancelUpload } from "./cancel-upload";
 import { createUploadIntent } from "./create-upload-intent";
 import { finalizeUpload } from "./finalize-upload";
+import { recordingUploadActionError } from "./recording-action-state";
 
 const userId = "2c15dfe2-ea8c-420e-85ad-e85901974931";
 const meetingId = "cfb378e0-88e2-4cbf-946f-a8ca8f6df536";
 const recordingId = "6b79f5f3-f083-4a75-b74b-41342f2b1454";
+const processingJobId = "911a4a76-8622-49c9-b3d1-a07c55514f91";
 const metadata = {
   meetingId,
   filename: "weekly-review.webm",
@@ -136,6 +138,7 @@ describe("recording upload actions", () => {
       eq: vi.fn().mockReturnThis(),
       maybeSingle: singleResult({
         id: recordingId,
+        meeting_id: meetingId,
         storage_bucket: "recordings",
         storage_path: `${userId}/${meetingId}/${recordingId}.webm`,
         status: "uploading",
@@ -148,9 +151,28 @@ describe("recording upload actions", () => {
         .fn()
         .mockReturnValue({ single: singleResult({ id: recordingId }) }),
     };
-    client.from.mockImplementation(() =>
-      client.from.mock.calls.length === 1 ? recordingQuery : updateQuery,
-    );
+    const activeJobQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult(null),
+    };
+    const insertJobQuery = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi
+        .fn()
+        .mockReturnValue({ single: singleResult({ id: processingJobId }) }),
+    };
+    let recordingCalls = 0;
+    let processingJobCalls = 0;
+    client.from.mockImplementation((table: string) => {
+      if (table === "recordings") {
+        recordingCalls += 1;
+        return recordingCalls === 1 ? recordingQuery : updateQuery;
+      }
+      processingJobCalls += 1;
+      return processingJobCalls === 1 ? activeJobQuery : insertJobQuery;
+    });
     client.storage.from.mockReturnValue({
       list: vi.fn().mockResolvedValue({
         data: [{ name: `${recordingId}.webm` }],
@@ -167,6 +189,99 @@ describe("recording upload actions", () => {
         uploaded_at: expect.any(String),
       }),
     );
+    expect(recordingQuery.eq).toHaveBeenCalledWith("meetings.user_id", userId);
+    expect(insertJobQuery.insert).toHaveBeenCalledWith({
+      recording_id: recordingId,
+      user_id: userId,
+      status: "queued",
+      attempt_count: 0,
+    });
+  });
+
+  it("reuses the active job when uploaded recording finalization is repeated", async () => {
+    const client = authenticatedClient();
+    const recordingQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({
+        id: recordingId,
+        meeting_id: meetingId,
+        storage_bucket: "recordings",
+        storage_path: `${userId}/${meetingId}/${recordingId}.webm`,
+        status: "uploaded",
+      }),
+    };
+    const activeJobQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({ id: processingJobId }),
+    };
+    client.from.mockImplementation((table: string) =>
+      table === "recordings" ? recordingQuery : activeJobQuery,
+    );
+
+    await expect(finalizeUpload({ recordingId })).resolves.toEqual({
+      status: "success",
+      data: { recordingId },
+    });
+    expect(client.storage.from).not.toHaveBeenCalled();
+    expect(activeJobQuery.select).toHaveBeenCalled();
+  });
+
+  it("returns a safe error when processing job creation fails", async () => {
+    const client = authenticatedClient();
+    const recordingQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({
+        id: recordingId,
+        meeting_id: meetingId,
+        storage_bucket: "recordings",
+        storage_path: `${userId}/${meetingId}/${recordingId}.webm`,
+        status: "uploading",
+      }),
+    };
+    const updateQuery = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      select: vi
+        .fn()
+        .mockReturnValue({ single: singleResult({ id: recordingId }) }),
+    };
+    const activeJobQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult(null),
+    };
+    const insertJobQuery = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnValue({
+        single: singleResult(null, { message: "sensitive database detail" }),
+      }),
+    };
+    let recordingCalls = 0;
+    let processingJobCalls = 0;
+    client.from.mockImplementation((table: string) => {
+      if (table === "recordings") {
+        recordingCalls += 1;
+        return recordingCalls === 1 ? recordingQuery : updateQuery;
+      }
+      processingJobCalls += 1;
+      return processingJobCalls === 1 ? activeJobQuery : insertJobQuery;
+    });
+    client.storage.from.mockReturnValue({
+      list: vi.fn().mockResolvedValue({
+        data: [{ name: `${recordingId}.webm` }],
+        error: null,
+      }),
+    });
+
+    await expect(finalizeUpload({ recordingId })).resolves.toEqual({
+      status: "error",
+      message: recordingUploadActionError,
+    });
   });
 
   it("returns a safe error when the expected object is missing", async () => {
