@@ -104,6 +104,17 @@ export const zhCN = {
   },
   recordings: {
     uploadActionFailed: "暂时无法完成录音上传，请重试。",
+    fileLabel: "选择录音文件",
+    fileHelp: "支持 MP3、MP4、WAV 和 WebM 格式，文件不超过 500MB。",
+    invalidType: "仅支持 MP3、MP4、WAV 或 WebM 音频文件。",
+    invalidSize: "录音文件不能超过 500MB。",
+    invalidFile: "请选择有效的录音文件。",
+    uploading: "正在上传录音...",
+    uploadComplete: "录音上传完成。",
+    uploadFailed: "录音上传失败，请重试。",
+    uploadCancelled: "录音上传已取消。",
+    cancelUpload: "取消上传",
+    retryUpload: "重试上传",
   },
   auth: {
     email: "邮箱地址",
