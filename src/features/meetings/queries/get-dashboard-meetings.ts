@@ -4,6 +4,7 @@ import type {
 } from "@/entities/meeting/model/meeting";
 import { mapMeetingRow } from "@/entities/meeting/model/meeting";
 import { createClient } from "@/shared/lib/supabase/server";
+import { reportServerEvent } from "@/shared/observability/server";
 
 const MEETING_COLUMNS =
   "id,title,meeting_date,archived_at,created_at,updated_at";
@@ -21,6 +22,7 @@ function startOfUtcWeek(now: Date) {
 }
 
 export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
+  const startedAt = Date.now();
   const supabase = await createClient();
   const totalQuery = supabase
     .from("meetings")
@@ -54,18 +56,6 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
     recentQuery,
   ]);
 
-  const queryResults = { total, active, archived, thisWeek, recent };
-  if (process.env.NODE_ENV === "development") {
-    for (const [operation, result] of Object.entries(queryResults)) {
-      if (result.error) {
-        console.error("Dashboard meeting query failed.", {
-          operation,
-          error: result.error,
-        });
-      }
-    }
-  }
-
   if (
     total.error ||
     active.error ||
@@ -73,6 +63,13 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
     thisWeek.error ||
     recent.error
   ) {
+    reportServerEvent({
+      category: "supabase",
+      operation: "dashboard_meeting_query",
+      outcome: "failure",
+      failureCode: "supabase_query_failed",
+      durationMs: Date.now() - startedAt,
+    });
     throw new Error("Unable to load dashboard meeting data.");
   }
 
