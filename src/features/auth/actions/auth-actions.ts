@@ -69,7 +69,8 @@ export async function verifySignupEmailOtpAction(
     return { status: "error", message: mapAuthError(error.message) };
   }
 
-  return { status: "success", message: zhCN.auth.otpVerified };
+  const nextPath = formData.get("next");
+  redirect(getSafeInternalPath(typeof nextPath === "string" ? nextPath : null));
 }
 
 export async function resendSignupEmailVerificationAction(

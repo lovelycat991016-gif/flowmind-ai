@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ createClient: vi.fn() }));
+const mocks = vi.hoisted(() => ({ createClient: vi.fn(), redirect: vi.fn() }));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: mocks.createClient,
 }));
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 import {
   requestSignupEmailVerificationAction,
@@ -46,17 +47,25 @@ describe("signup email OTP actions", () => {
     const verifyOtp = vi.fn().mockResolvedValue({ error: null });
     mocks.createClient.mockResolvedValue({ auth: { verifyOtp } });
 
+    mocks.redirect.mockImplementation(() => {
+      throw new Error("NEXT_REDIRECT");
+    });
     await expect(
       verifySignupEmailOtpAction(
         { status: "idle", message: "" },
-        formData({ email: "user@example.com", token: "123456" }),
+        formData({
+          email: "user@example.com",
+          token: "123456",
+          next: "/meetings",
+        }),
       ),
-    ).resolves.toEqual({ status: "success", message: zhCN.auth.otpVerified });
+    ).rejects.toThrow("NEXT_REDIRECT");
     expect(verifyOtp).toHaveBeenCalledWith({
       email: "user@example.com",
       token: "123456",
       type: "signup",
     });
+    expect(mocks.redirect).toHaveBeenCalledWith("/meetings");
   });
 
   it("returns the mapped invalid or expired signup OTP error", async () => {
