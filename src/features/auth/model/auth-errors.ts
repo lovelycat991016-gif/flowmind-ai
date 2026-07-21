@@ -5,6 +5,8 @@ const AUTH_ERROR_MESSAGES: ReadonlyArray<readonly [string, string]> = [
   ["email not confirmed", zhCN.auth.emailUnconfirmed],
   ["user already registered", zhCN.auth.alreadyRegistered],
   ["password should be at least", zhCN.auth.passwordLength],
+  ["token has expired or is invalid", zhCN.auth.otpCodeInvalid],
+  ["email rate limit exceeded", zhCN.auth.otpRateLimited],
 ];
 
 export function mapAuthError(providerMessage: string): string {

@@ -18,6 +18,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, zhCN.auth.passwordRequired),
 });
 
+const otpTokenSchema = z
+  .string()
+  .trim()
+  .min(1, zhCN.auth.otpCodeRequired)
+  .regex(/^\d{6}$/, zhCN.auth.otpCodeInvalid);
+
+export const emailOtpRequestSchema = z.object({ email: emailSchema });
+
+export const emailOtpVerificationSchema = z.object({
+  email: emailSchema,
+  token: otpTokenSchema,
+});
+
 export const signUpSchema = z
   .object({
     email: emailSchema,
@@ -38,4 +51,8 @@ export const updatePasswordSchema = z
   });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+export type EmailOtpRequestInput = z.infer<typeof emailOtpRequestSchema>;
+export type EmailOtpVerificationInput = z.infer<
+  typeof emailOtpVerificationSchema
+>;
 export type SignUpInput = z.infer<typeof signUpSchema>;

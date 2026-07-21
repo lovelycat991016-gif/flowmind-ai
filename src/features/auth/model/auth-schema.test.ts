@@ -1,11 +1,42 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  emailOtpRequestSchema,
+  emailOtpVerificationSchema,
   forgotPasswordSchema,
   loginSchema,
   signUpSchema,
   updatePasswordSchema,
 } from "./auth-schema";
+
+describe("email OTP schemas", () => {
+  it("normalizes an email address for an OTP request", () => {
+    expect(
+      emailOtpRequestSchema.parse({ email: "  USER@Example.COM " }).email,
+    ).toBe("user@example.com");
+  });
+
+  it("accepts exactly six ASCII digits for OTP verification", () => {
+    expect(
+      emailOtpVerificationSchema.parse({
+        email: "user@example.com",
+        token: "123456",
+      }).token,
+    ).toBe("123456");
+  });
+
+  it.each(["", "12345", "1234567", "１２３４５６", "12 456", "abcdef"])(
+    "rejects an invalid OTP token %s",
+    (token) => {
+      expect(
+        emailOtpVerificationSchema.safeParse({
+          email: "user@example.com",
+          token,
+        }).success,
+      ).toBe(false);
+    },
+  );
+});
 
 describe("loginSchema", () => {
   it("normalizes a valid email address", () => {
