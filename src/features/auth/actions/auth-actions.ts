@@ -23,20 +23,20 @@ function firstIssueMessage(error: {
   return error.issues[0]?.message ?? zhCN.auth.formFallback;
 }
 
-export async function requestEmailOtpAction(
+export async function requestSignupEmailVerificationAction(
   _previousState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
-  const result = emailOtpRequestSchema.safeParse(Object.fromEntries(formData));
+  const result = signUpSchema.safeParse(Object.fromEntries(formData));
 
   if (!result.success) {
     return { status: "error", message: firstIssueMessage(result.error) };
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabase.auth.signUp({
     email: result.data.email,
-    options: { shouldCreateUser: true },
+    password: result.data.password,
   });
 
   if (error) {
@@ -46,7 +46,7 @@ export async function requestEmailOtpAction(
   return { status: "success", message: zhCN.auth.otpCodeSent };
 }
 
-export async function verifyEmailOtpAction(
+export async function verifySignupEmailOtpAction(
   _previousState: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
@@ -62,7 +62,7 @@ export async function verifyEmailOtpAction(
   const { error } = await supabase.auth.verifyOtp({
     email: result.data.email,
     token: result.data.token,
-    type: "email",
+    type: "signup",
   });
 
   if (error) {
@@ -70,6 +70,29 @@ export async function verifyEmailOtpAction(
   }
 
   return { status: "success", message: zhCN.auth.otpVerified };
+}
+
+export async function resendSignupEmailVerificationAction(
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const result = emailOtpRequestSchema.safeParse(Object.fromEntries(formData));
+
+  if (!result.success) {
+    return { status: "error", message: firstIssueMessage(result.error) };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: result.data.email,
+    options: { shouldCreateUser: false },
+  });
+
+  if (error) {
+    return { status: "error", message: mapAuthError(error.message) };
+  }
+
+  return { status: "success", message: zhCN.auth.otpCodeSent };
 }
 
 export async function signInAction(

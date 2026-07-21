@@ -7,8 +7,9 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 }));
 
 import {
-  requestEmailOtpAction,
-  verifyEmailOtpAction,
+  requestSignupEmailVerificationAction,
+  resendSignupEmailVerificationAction,
+  verifySignupEmailOtpAction,
 } from "./auth-actions";
 import { zhCN } from "@/shared/i18n/zh-CN";
 
@@ -20,32 +21,72 @@ function formData(values: Record<string, string>) {
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("email OTP authentication actions", () => {
-  it("requests an OTP with normalized email and self-service beta signup enabled", async () => {
-    const signInWithOtp = vi.fn().mockResolvedValue({ error: null });
-    mocks.createClient.mockResolvedValue({ auth: { signInWithOtp } });
+describe("signup email OTP actions", () => {
+  it("creates a signup verification request from valid email and password input", async () => {
+    const signUp = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({ auth: { signUp } });
 
     await expect(
-      requestEmailOtpAction({ status: "idle", message: "" }, formData({ email: " USER@Example.com " })),
+      requestSignupEmailVerificationAction(
+        { status: "idle", message: "" },
+        formData({
+          email: " USER@Example.com ",
+          password: "secure-passphrase",
+          confirmPassword: "secure-passphrase",
+        }),
+      ),
     ).resolves.toEqual({ status: "success", message: zhCN.auth.otpCodeSent });
-    expect(signInWithOtp).toHaveBeenCalledWith({
+    expect(signUp).toHaveBeenCalledWith({
       email: "user@example.com",
-      options: { shouldCreateUser: true },
+      password: "secure-passphrase",
     });
   });
 
-  it("returns the mapped invalid or expired OTP error", async () => {
+  it("verifies a signup OTP", async () => {
+    const verifyOtp = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({ auth: { verifyOtp } });
+
+    await expect(
+      verifySignupEmailOtpAction(
+        { status: "idle", message: "" },
+        formData({ email: "user@example.com", token: "123456" }),
+      ),
+    ).resolves.toEqual({ status: "success", message: zhCN.auth.otpVerified });
+    expect(verifyOtp).toHaveBeenCalledWith({
+      email: "user@example.com",
+      token: "123456",
+      type: "signup",
+    });
+  });
+
+  it("returns the mapped invalid or expired signup OTP error", async () => {
     const verifyOtp = vi.fn().mockResolvedValue({
       error: { message: "Token has expired or is invalid" },
     });
     mocks.createClient.mockResolvedValue({ auth: { verifyOtp } });
 
     await expect(
-      verifyEmailOtpAction(
+      verifySignupEmailOtpAction(
         { status: "idle", message: "" },
         formData({ email: "user@example.com", token: "123456" }),
       ),
     ).resolves.toEqual({ status: "error", message: zhCN.auth.otpCodeInvalid });
+  });
+
+  it("uses non-creating semantics when resending a verification code", async () => {
+    const signInWithOtp = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({ auth: { signInWithOtp } });
+
+    await expect(
+      resendSignupEmailVerificationAction(
+        { status: "idle", message: "" },
+        formData({ email: "user@example.com" }),
+      ),
+    ).resolves.toEqual({ status: "success", message: zhCN.auth.otpCodeSent });
+    expect(signInWithOtp).toHaveBeenCalledWith({
+      email: "user@example.com",
+      options: { shouldCreateUser: false },
+    });
   });
 
   it("returns the mapped OTP rate-limit error", async () => {
@@ -55,7 +96,10 @@ describe("email OTP authentication actions", () => {
     mocks.createClient.mockResolvedValue({ auth: { signInWithOtp } });
 
     await expect(
-      requestEmailOtpAction({ status: "idle", message: "" }, formData({ email: "user@example.com" })),
+      resendSignupEmailVerificationAction(
+        { status: "idle", message: "" },
+        formData({ email: "user@example.com" }),
+      ),
     ).resolves.toEqual({ status: "error", message: zhCN.auth.otpRateLimited });
   });
 
@@ -64,7 +108,7 @@ describe("email OTP authentication actions", () => {
     mocks.createClient.mockResolvedValue({ auth: { verifyOtp } });
 
     await expect(
-      verifyEmailOtpAction(
+      verifySignupEmailOtpAction(
         { status: "idle", message: "" },
         formData({ email: "user@example.com", token: "12345" }),
       ),
@@ -73,15 +117,19 @@ describe("email OTP authentication actions", () => {
   });
 
   it("does not expose an unexpected provider failure", async () => {
-    const verifyOtp = vi.fn().mockResolvedValue({
+    const signUp = vi.fn().mockResolvedValue({
       error: { message: "provider secret leaked" },
     });
-    mocks.createClient.mockResolvedValue({ auth: { verifyOtp } });
+    mocks.createClient.mockResolvedValue({ auth: { signUp } });
 
     await expect(
-      verifyEmailOtpAction(
+      requestSignupEmailVerificationAction(
         { status: "idle", message: "" },
-        formData({ email: "user@example.com", token: "123456" }),
+        formData({
+          email: "user@example.com",
+          password: "secure-passphrase",
+          confirmPassword: "secure-passphrase",
+        }),
       ),
     ).resolves.toEqual({ status: "error", message: zhCN.auth.authFailed });
   });
