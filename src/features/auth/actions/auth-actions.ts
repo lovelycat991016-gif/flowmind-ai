@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { mapAuthError } from "@/features/auth/model/auth-errors";
 import { getSafeInternalPath } from "@/features/auth/model/auth-routes";
 import {
+  emailOtpRequestSchema,
+  emailOtpVerificationSchema,
   forgotPasswordSchema,
   loginSchema,
   signUpSchema,
@@ -19,6 +21,55 @@ function firstIssueMessage(error: {
   issues: ReadonlyArray<{ message: string }>;
 }) {
   return error.issues[0]?.message ?? zhCN.auth.formFallback;
+}
+
+export async function requestEmailOtpAction(
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const result = emailOtpRequestSchema.safeParse(Object.fromEntries(formData));
+
+  if (!result.success) {
+    return { status: "error", message: firstIssueMessage(result.error) };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: result.data.email,
+    options: { shouldCreateUser: true },
+  });
+
+  if (error) {
+    return { status: "error", message: mapAuthError(error.message) };
+  }
+
+  return { status: "success", message: zhCN.auth.otpCodeSent };
+}
+
+export async function verifyEmailOtpAction(
+  _previousState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const result = emailOtpVerificationSchema.safeParse(
+    Object.fromEntries(formData),
+  );
+
+  if (!result.success) {
+    return { status: "error", message: firstIssueMessage(result.error) };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({
+    email: result.data.email,
+    token: result.data.token,
+    type: "email",
+  });
+
+  if (error) {
+    return { status: "error", message: mapAuthError(error.message) };
+  }
+
+  return { status: "success", message: zhCN.auth.otpVerified };
 }
 
 export async function signInAction(

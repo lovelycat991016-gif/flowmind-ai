@@ -204,6 +204,8 @@ export const zhCN = {
     otpCodeRequired: "请输入验证码。",
     otpCodeInvalid: "验证码无效或已过期，请重新获取。",
     otpRateLimited: "验证码发送过于频繁，请稍后再试。",
+    otpCodeSent: "如果该邮箱可用，我们已发送验证码。",
+    otpVerified: "验证码验证成功。",
     invalidCredentials: "邮箱或密码不正确。",
     emailUnconfirmed: "请先验证邮箱后再登录。",
     alreadyRegistered: "该邮箱已注册账号。",
