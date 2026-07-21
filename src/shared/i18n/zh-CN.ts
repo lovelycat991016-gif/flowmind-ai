@@ -182,6 +182,7 @@ export const zhCN = {
     forgotPassword: "忘记密码？",
     signIn: "登录",
     createAccount: "创建账号",
+    sendVerificationCode: "发送验证码",
     sendReset: "发送重置链接",
     updatePassword: "更新密码",
     waiting: "请稍候...",

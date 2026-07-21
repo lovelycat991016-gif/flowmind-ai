@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { signUpAction } from "@/features/auth/actions/auth-actions";
+import { requestSignupEmailVerificationAction } from "@/features/auth/actions/auth-actions";
 import { AuthForm } from "@/features/auth/ui/auth-form";
 import { AuthPanel } from "@/features/auth/ui/auth-panel";
 import { zhCN } from "@/shared/i18n/zh-CN";
@@ -25,7 +25,7 @@ export default function SignUpPage() {
       }
       title={zhCN.auth.signUpTitle}
     >
-      <AuthForm action={signUpAction} mode="signup" />
+      <AuthForm action={requestSignupEmailVerificationAction} mode="signup" />
     </AuthPanel>
   );
 }

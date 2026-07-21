@@ -24,7 +24,7 @@ type AuthFormProps = {
 
 const submitLabels: Record<AuthMode, string> = {
   login: zhCN.auth.signIn,
-  signup: zhCN.auth.createAccount,
+  signup: zhCN.auth.sendVerificationCode,
   "forgot-password": zhCN.auth.sendReset,
   "reset-password": zhCN.auth.updatePassword,
 };

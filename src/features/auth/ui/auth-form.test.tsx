@@ -47,7 +47,7 @@ describe("AuthForm", () => {
     expect(action).toHaveBeenCalledOnce();
   });
 
-  it("renders password confirmation for sign-up", () => {
+  it("renders signup credentials and an accessible verification-code request action", () => {
     render(
       <AuthForm
         action={vi.fn(async () => ({
@@ -62,6 +62,22 @@ describe("AuthForm", () => {
       "type",
       "password",
     );
-    expect(screen.getByRole("button", { name: "创建账号" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "发送验证码" })).toBeEnabled();
+  });
+
+  it("shows safe signup verification request feedback", async () => {
+    const action = vi.fn(async () => ({
+      status: "success" as const,
+      message: "如果该邮箱可用，我们已发送验证码。",
+    }));
+
+    render(<AuthForm action={action} mode="signup" />);
+    fireEvent.submit(
+      screen.getByRole("button", { name: "发送验证码" }).closest("form")!,
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "如果该邮箱可用，我们已发送验证码。",
+    );
   });
 });
