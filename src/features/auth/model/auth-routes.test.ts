@@ -21,6 +21,12 @@ describe("getAuthRedirect", () => {
     );
   });
 
+  it("sends an authenticated user away from signup verification", () => {
+    expect(
+      getAuthRedirect({ pathname: "/signup/verify", isAuthenticated: true }),
+    ).toBe("/dashboard");
+  });
+
   it("allows public callback and password recovery routes", () => {
     expect(
       getAuthRedirect({ pathname: "/auth/callback", isAuthenticated: false }),

@@ -1,6 +1,11 @@
 import type { Route } from "next";
 
-const AUTH_ENTRY_ROUTES = new Set(["/login", "/signup", "/forgot-password"]);
+const AUTH_ENTRY_ROUTES = new Set([
+  "/login",
+  "/signup",
+  "/signup/verify",
+  "/forgot-password",
+]);
 
 type AuthRouteContext = {
   pathname: string;

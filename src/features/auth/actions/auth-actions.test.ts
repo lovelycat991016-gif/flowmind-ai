@@ -27,6 +27,9 @@ describe("signup email OTP actions", () => {
     const signUp = vi.fn().mockResolvedValue({ error: null });
     mocks.createClient.mockResolvedValue({ auth: { signUp } });
 
+    mocks.redirect.mockImplementation(() => {
+      throw new Error("NEXT_REDIRECT");
+    });
     await expect(
       requestSignupEmailVerificationAction(
         { status: "idle", message: "" },
@@ -36,11 +39,14 @@ describe("signup email OTP actions", () => {
           confirmPassword: "secure-passphrase",
         }),
       ),
-    ).resolves.toEqual({ status: "success", message: zhCN.auth.otpCodeSent });
+    ).rejects.toThrow("NEXT_REDIRECT");
     expect(signUp).toHaveBeenCalledWith({
       email: "user@example.com",
       password: "secure-passphrase",
     });
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/signup/verify?email=user%40example.com&next=%2Fdashboard",
+    );
   });
 
   it("verifies a signup OTP", async () => {

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 
 import { mapAuthError } from "@/features/auth/model/auth-errors";
 import { getSafeInternalPath } from "@/features/auth/model/auth-routes";
@@ -43,7 +44,13 @@ export async function requestSignupEmailVerificationAction(
     return { status: "error", message: mapAuthError(error.message) };
   }
 
-  return { status: "success", message: zhCN.auth.otpCodeSent };
+  const nextPath = formData.get("next");
+  const destination = getSafeInternalPath(
+    typeof nextPath === "string" ? nextPath : null,
+  );
+  redirect(
+    `/signup/verify?email=${encodeURIComponent(result.data.email)}&next=${encodeURIComponent(destination)}` as Route,
+  );
 }
 
 export async function verifySignupEmailOtpAction(
