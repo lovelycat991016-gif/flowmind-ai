@@ -1,75 +1,75 @@
-# Sprint 9 Passwordless Authentication Implementation Plan
+# Sprint 9 Signup Email OTP Verification Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` or `superpowers:executing-plans` task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** Replace password sign-in with six-digit Supabase email OTP while retaining SSR session, middleware, profiles, and RLS boundaries.
+**Goal:** Add six-digit email verification after password signup while preserving password login and all existing session/security boundaries.
 
-**Architecture:** Server Actions call the existing authenticated Supabase SSR client for `signInWithOtp` and `verifyOtp`. Existing middleware consumes the resulting cookie unchanged. No database or domain-feature code changes.
+**Architecture:** Existing signup creates an unconfirmed Supabase Auth user. New server actions verify a signup OTP or resend it without creating users. Existing `signInWithPassword`, SSR cookies, middleware, profiles, and RLS remain untouched.
 
-**Tech Stack:** Next.js App Router, TypeScript strict mode, Supabase Auth SSR, Zod, React, Vitest, Testing Library, Tailwind.
+**Tech Stack:** Next.js App Router, Supabase Auth SSR, TypeScript, Zod, React, Vitest, Testing Library, Tailwind.
 
-## Task 1: Auth Contract Audit
+## Task 1: Signup Verification Audit
 
-**Files:** Modify `docs/qa/sprint-9-passwordless-auth-qa.md`; test `src/features/auth/model/auth-routes.test.ts`.
+**Files:** Create `docs/qa/sprint-9-signup-email-verification-qa.md`.
 
-- [ ] Write a failing route test for preserving a safe `next` path from email request through verification.
-- [ ] Document Supabase email OTP enablement, redirect URL, expiry, resend, rate-limit, and sender checks; do not record credentials.
-- [ ] Verify the test passes and commit `docs: define passwordless auth release checks`.
+- [ ] Document Supabase Confirm Email/OTP template, sender, expiry, rate-limit, redirect URL, and test-account requirements.
+- [ ] Document that password login is a regression gate and no database or RLS validation changes are allowed.
+- [ ] Commit `docs: define signup email verification checks`.
 
-## Task 2: OTP Validation Contracts
+## Task 2: OTP Contracts
 
-**Files:** Modify `src/features/auth/model/auth-schema.ts`; modify `src/features/auth/model/auth-schema.test.ts`; modify `src/shared/i18n/zh-CN.ts`.
+**Files:** `src/features/auth/model/auth-schema.ts`, tests, error model tests, Chinese resource.
 
-- [ ] Write failing tests for a normalized email and exactly six ASCII digits.
-- [ ] Add `requestOtpSchema` and `verifyOtpSchema` with safe Chinese validation messages.
-- [ ] Run focused tests, lint, typecheck; commit `feat: define email otp validation`.
+- [x] Add request and six-digit verification schemas, safe OTP errors, Chinese copy, and tests.
+- [x] Commit `feat: add email otp auth contracts`.
 
-## Task 3: OTP Server Actions
+## Task 3: Signup OTP Actions
 
-**Files:** Modify `src/features/auth/actions/auth-actions.ts`; modify/add action tests.
+**Files:** `src/features/auth/actions/auth-actions.ts`, action tests.
 
-- [ ] Add failing tests for OTP request, generic request success, invalid token, safe provider error, and successful verify redirect.
-- [ ] Implement `requestEmailOtpAction` with `signInWithOtp` and `verifyEmailOtpAction` with `verifyOtp({ type: "email" })`; preserve safe next paths.
-- [ ] Run focused tests, lint, typecheck; commit `feat: add email otp server actions`.
+- [x] Add tested request and verification actions.
+- [ ] Change the verification call to `type: "signup"`; ensure resend uses `shouldCreateUser: false`; redirect only after successful signup verification.
+- [ ] Add regression tests for no user creation during resend and password login unchanged.
+- [ ] Commit the correction separately as `fix: scope email otp actions to signup verification`.
 
-## Task 4: Email Request UI
+## Task 4: Signup Form Handoff
 
-**Files:** Modify `src/features/auth/ui/auth-form.tsx`; modify auth component tests; modify login page only if composition requires it.
+**Files:** Signup page/form and tests only.
 
-- [ ] Write failing tests for a password-free email request form, pending state, and accessible error/status message.
-- [ ] Replace login credential controls with the email request control using the new action.
-- [ ] Run focused tests, lint, typecheck; commit `feat: add passwordless email request form`.
+- [ ] Write failing tests proving signup preserves email and safe `next` context for verification while login keeps password input.
+- [ ] Route a successful signup to the verification view; do not modify login composition.
+- [ ] Commit `feat: start signup email verification flow`.
 
-## Task 5: Six-Digit Verification UI
+## Task 5: Verification And Resend UI
 
-**Files:** Create `src/features/auth/ui/otp-verification-form.tsx`; create test; create/modify verification page without restructuring routes; modify localization.
+**Files:** Create signup verification form/page and tests; Chinese resource.
 
-- [ ] Write failing tests for email context, six-digit input, paste, keyboard focus, resend, and accessible status/errors.
-- [ ] Implement the verification form and route composition using server actions only; do not persist the OTP.
-- [ ] Run focused tests, lint, typecheck; commit `feat: add email otp verification form`.
+- [ ] Write failing tests for six-digit input, paste, keyboard access, resend, accessible status/errors, and safe email context.
+- [ ] Implement verification/resend UI using existing Server Actions; persist no OTP in browser storage.
+- [ ] Commit `feat: add signup email verification form`.
 
-## Task 6: Password Flow Removal And Compatibility
+## Task 6: Session And Login Regression
 
-**Files:** Modify login/signup/forgot-password composition and tests; modify README only where authentication instructions change.
+**Files:** Auth action, route, middleware, and UI tests only.
 
-- [ ] Write failing tests that login no longer requires password credentials and authenticated redirects remain unchanged.
-- [ ] Remove password-first entry points from the active login journey while preserving sign-out, callback, middleware, profiles, and protected-route behavior.
-- [ ] Run auth and middleware tests, lint, typecheck; commit `feat: complete passwordless auth flow`.
+- [ ] Test successful `verifyOtp(type: "signup")` creates the normal SSR session and safe redirect.
+- [ ] Test confirmed users still log in with email/password and protected-route redirects are unchanged.
+- [ ] Commit `test: cover signup verification and password login regression`.
 
 ## Task 7: Release Verification
 
-**Files:** Modify `docs/qa/sprint-9-passwordless-auth-qa.md`; modify README if needed.
+**Files:** QA document and README if authentication instructions require correction.
 
-- [ ] Record test-account browser QA for request, verify, invalid/expired code, resend, desktop/tablet/mobile, keyboard navigation, session persistence, and sign-out.
-- [ ] Run `npm run format`, `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`, and `git diff --check` sequentially.
-- [ ] Confirm no migration, RLS, worker, transcription, intelligence, or meeting changes; commit `docs: complete sprint 9 passwordless auth verification`.
+- [ ] Record beta browser QA for signup, invalid/expired/resend OTP, desktop/tablet/mobile, keyboard navigation, session persistence, password login, and password reset.
+- [ ] Run format, lint, typecheck, full tests, build, and `git diff --check`; confirm no database, middleware, worker, provider, or AI pipeline change.
+- [ ] Commit `docs: complete sprint 9 signup verification`.
 
 ## Commit Boundaries
 
-1. `docs: define passwordless auth release checks`
-2. `feat: define email otp validation`
-3. `feat: add email otp server actions`
-4. `feat: add passwordless email request form`
-5. `feat: add email otp verification form`
-6. `feat: complete passwordless auth flow`
-7. `docs: complete sprint 9 passwordless auth verification`
+1. `docs: define signup email verification checks`
+2. `feat: add email otp auth contracts` (completed)
+3. `fix: scope email otp actions to signup verification`
+4. `feat: start signup email verification flow`
+5. `feat: add signup email verification form`
+6. `test: cover signup verification and password login regression`
+7. `docs: complete sprint 9 signup verification`
