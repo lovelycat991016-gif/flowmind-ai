@@ -26,6 +26,8 @@ describe("Supabase production contract", () => {
       "202607210001_add_meeting_intelligence.sql",
       "202607210002_add_meeting_intelligence_worker.sql",
       "202607210003_add_ai_usage_events.sql",
+      "202607250001_repair_meeting_intelligence_worker.sql",
+      "202607250002_restrict_meeting_intelligence_claim_rpc.sql",
     ]);
   });
 
@@ -40,7 +42,7 @@ describe("Supabase production contract", () => {
       "grant execute on function public.complete_transcription_job",
     );
     expect(
-      migration("202607210002_add_meeting_intelligence_worker.sql"),
+      migration("202607250002_restrict_meeting_intelligence_claim_rpc.sql"),
     ).toContain(
       "grant execute on function public.claim_next_meeting_intelligence(text, integer) to service_role",
     );
