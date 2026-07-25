@@ -16,6 +16,7 @@ import { zhCN } from "@/shared/i18n/zh-CN";
 import { MeetingRecordingSection } from "./meeting-recording-section";
 import { TranscriptSection } from "@/features/transcription/ui/transcript-section";
 import { MeetingIntelligenceSection } from "@/features/meeting-intelligence/ui/meeting-intelligence-section";
+import { ManualIntelligenceForm } from "@/features/meeting-intelligence/ui/manual-intelligence-form";
 
 export function MeetingDetail({
   meeting,
@@ -33,6 +34,8 @@ export function MeetingDetail({
   >[0]["intelligence"];
 }) {
   const isArchived = Boolean(meeting.archivedAt);
+  const intelligencePending =
+    intelligence?.status === "queued" || intelligence?.status === "running";
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 sm:px-6 sm:py-10">
       <Link
@@ -75,6 +78,9 @@ export function MeetingDetail({
         recording={recording}
         transcript={transcript}
       />
+      {!intelligencePending && intelligence?.status !== "completed" ? (
+        <ManualIntelligenceForm archived={isArchived} meetingId={meeting.id} />
+      ) : null}
       <MeetingIntelligenceSection
         archived={isArchived}
         intelligence={intelligence}

@@ -44,7 +44,7 @@ export type MeetingIntelligenceResult = {
 export type MeetingIntelligence = {
   id: string;
   meetingId: string;
-  transcriptId: string;
+  transcriptId: string | null;
   userId: string;
   status: MeetingIntelligenceGenerationStatus;
   modelIdentifier: string | null;

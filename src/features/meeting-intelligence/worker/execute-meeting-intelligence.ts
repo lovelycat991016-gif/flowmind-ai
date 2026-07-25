@@ -8,7 +8,7 @@ import { createMeetingIntelligenceWorkerRepository } from "./meeting-intelligenc
 export type ClaimedMeetingIntelligence = {
   id: string;
   meetingId: string;
-  transcriptId: string;
+  transcriptId: string | null;
   userId: string;
   lockedBy: string;
 };
@@ -17,7 +17,7 @@ export type MeetingIntelligenceWorkerDependencies = {
     workerId: string,
     leaseSeconds: number,
   ): Promise<ClaimedMeetingIntelligence | null>;
-  loadTranscript(
+  loadInput(
     job: ClaimedMeetingIntelligence,
   ): Promise<{ content: string; language: string | null }>;
   complete(
@@ -53,10 +53,10 @@ export async function executeNextMeetingIntelligence(input: {
   if (job.lockedBy !== input.workerId)
     throw new Error("Unable to execute meeting intelligence.");
   try {
-    const transcript = await input.dependencies.loadTranscript(job);
+    const source = await input.dependencies.loadInput(job);
     const result = await input.provider.generate({
-      transcriptContent: transcript.content,
-      transcriptLanguage: transcript.language,
+      transcriptContent: source.content,
+      transcriptLanguage: source.language,
       promptVersion: "meeting_intelligence/v1",
     });
     await input.dependencies.complete(job, result);

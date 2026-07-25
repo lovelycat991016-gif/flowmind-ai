@@ -3,7 +3,7 @@ import { executeNextMeetingIntelligence } from "./execute-meeting-intelligence";
 const job = {
   id: "a",
   meetingId: "m",
-  transcriptId: "t",
+  transcriptId: null,
   userId: "u",
   lockedBy: "w",
 };
@@ -18,14 +18,14 @@ const result = {
 };
 const setup = () => ({
   claim: vi.fn().mockResolvedValue(job),
-  loadTranscript: vi
+  loadInput: vi
     .fn()
-    .mockResolvedValue({ content: "text", language: "zh" }),
+    .mockResolvedValue({ content: "manual text", language: "zh" }),
   complete: vi.fn(),
   fail: vi.fn(),
 });
 describe("executeNextMeetingIntelligence", () => {
-  it("generates and persists one claimed result", async () => {
+  it("generates and persists one claimed manual-text result", async () => {
     const dependencies = setup();
     const provider = { generate: vi.fn().mockResolvedValue(result) };
     await expect(
@@ -36,11 +36,12 @@ describe("executeNextMeetingIntelligence", () => {
         dependencies,
       }),
     ).resolves.toEqual({ status: "completed", jobId: "a" });
+    expect(dependencies.loadInput).toHaveBeenCalledWith(job);
     expect(dependencies.complete).toHaveBeenCalledWith(job, result);
   });
-  it("fails safely for missing transcript and provider failure", async () => {
+  it("fails safely for missing input and provider failure", async () => {
     const dependencies = setup();
-    dependencies.loadTranscript.mockRejectedValue({
+    dependencies.loadInput.mockRejectedValue({
       code: "intelligence_input_invalid",
     });
     const provider = { generate: vi.fn() };

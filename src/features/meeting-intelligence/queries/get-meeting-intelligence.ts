@@ -29,7 +29,7 @@ export async function getMeetingIntelligence(meetingId: string) {
   const row = data as {
     id: string;
     meeting_id: string;
-    transcript_id: string;
+    transcript_id: string | null;
     status: MeetingIntelligenceGenerationStatus;
     result: unknown;
   };

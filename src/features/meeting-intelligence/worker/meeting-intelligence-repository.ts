@@ -21,7 +21,7 @@ export function createMeetingIntelligenceWorkerRepository(): MeetingIntelligence
       const row = data as {
         id: string;
         meeting_id: string;
-        transcript_id: string;
+        transcript_id: string | null;
         user_id: string;
         locked_by: string;
       };
@@ -33,11 +33,41 @@ export function createMeetingIntelligenceWorkerRepository(): MeetingIntelligence
         lockedBy: row.locked_by,
       };
     },
-    async loadTranscript(job) {
-      const { data, error } = await createWorkerServiceRoleClient()
+    async loadInput(job) {
+      const client = createWorkerServiceRoleClient();
+      const { data: intelligence, error: intelligenceError } = await client
+        .from("meeting_intelligence")
+        .select("input_text,transcript_id,meetings!inner(id,user_id)")
+        .eq("id", job.id)
+        .eq("user_id", job.userId)
+        .maybeSingle();
+      if (intelligenceError) throw safe("provider_unavailable");
+
+      const intelligenceRow = intelligence as {
+        input_text: string | null;
+        transcript_id: string | null;
+        meetings: { id: string; user_id: string };
+      } | null;
+      if (
+        !intelligenceRow ||
+        intelligenceRow.meetings.id !== job.meetingId ||
+        intelligenceRow.meetings.user_id !== job.userId
+      ) {
+        throw safe("intelligence_input_invalid");
+      }
+
+      if (intelligenceRow.input_text) {
+        return { content: intelligenceRow.input_text, language: null };
+      }
+
+      if (!intelligenceRow.transcript_id) {
+        throw safe("intelligence_input_invalid");
+      }
+
+      const { data, error } = await client
         .from("transcripts")
         .select("content,language,recordings!inner(meeting_id,user_id)")
-        .eq("id", job.transcriptId)
+        .eq("id", intelligenceRow.transcript_id)
         .eq("user_id", job.userId)
         .maybeSingle();
       if (error) throw safe("provider_unavailable");

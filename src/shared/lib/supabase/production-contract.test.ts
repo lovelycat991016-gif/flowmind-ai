@@ -28,6 +28,7 @@ describe("Supabase production contract", () => {
       "202607210003_add_ai_usage_events.sql",
       "202607250001_repair_meeting_intelligence_worker.sql",
       "202607250002_restrict_meeting_intelligence_claim_rpc.sql",
+      "202607250003_add_manual_intelligence_input.sql",
     ]);
   });
 

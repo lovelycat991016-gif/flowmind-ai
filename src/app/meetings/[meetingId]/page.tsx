@@ -24,13 +24,14 @@ export default async function MeetingDetailPage({
   if (!meeting) notFound();
 
   const recording = await getRecordingForMeeting(meeting.id);
+  const intelligencePromise = getMeetingIntelligence(meeting.id);
   const [processingJob, transcript, intelligence] = recording
     ? await Promise.all([
         getProcessingJobForRecording(recording.id),
         getTranscriptForRecording(recording.id),
-        getMeetingIntelligence(meeting.id),
+        intelligencePromise,
       ])
-    : [null, null, null];
+    : [null, null, await intelligencePromise];
 
   return (
     <MeetingDetail

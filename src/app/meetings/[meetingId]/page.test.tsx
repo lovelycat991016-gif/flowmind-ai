@@ -116,8 +116,9 @@ describe("MeetingDetailPage", () => {
     );
   });
 
-  it("renders a newly created meeting without querying recording-derived data", async () => {
+  it("loads manual intelligence without querying recording-derived data", async () => {
     mocks.getRecordingForMeeting.mockResolvedValue(null);
+    mocks.getMeetingIntelligence.mockResolvedValue({ status: "queued" });
 
     render(
       await MeetingDetailPage({
@@ -127,10 +128,14 @@ describe("MeetingDetailPage", () => {
 
     expect(mocks.getProcessingJobForRecording).not.toHaveBeenCalled();
     expect(mocks.getTranscriptForRecording).not.toHaveBeenCalled();
-    expect(mocks.getMeetingIntelligence).not.toHaveBeenCalled();
+    expect(mocks.getMeetingIntelligence).toHaveBeenCalledWith(meeting.id);
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "none",
+    );
+    expect(screen.getByTestId("processing-status")).toHaveAttribute(
+      "data-intelligence-status",
+      "queued",
     );
   });
 });
