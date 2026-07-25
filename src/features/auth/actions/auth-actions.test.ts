@@ -20,11 +20,16 @@ function formData(values: Record<string, string>) {
   return data;
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mocks.redirect.mockReset();
+});
 
 describe("signup email OTP actions", () => {
   it("creates a signup verification request from valid email and password input", async () => {
-    const signUp = vi.fn().mockResolvedValue({ error: null });
+    const signUp = vi
+      .fn()
+      .mockResolvedValue({ data: { session: null }, error: null });
     mocks.createClient.mockResolvedValue({ auth: { signUp } });
 
     mocks.redirect.mockImplementation(() => {
@@ -47,6 +52,28 @@ describe("signup email OTP actions", () => {
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/signup/verify?email=user%40example.com&next=%2Fdashboard",
     );
+  });
+
+  it("clears an unexpected signup session instead of allowing dashboard access", async () => {
+    const signOut = vi.fn().mockResolvedValue({ error: null });
+    const signUp = vi.fn().mockResolvedValue({
+      data: { session: { access_token: "never expose" } },
+      error: null,
+    });
+    mocks.createClient.mockResolvedValue({ auth: { signUp, signOut } });
+
+    await expect(
+      requestSignupEmailVerificationAction(
+        { status: "idle", message: "" },
+        formData({
+          email: "user@example.com",
+          password: "secure-passphrase",
+          confirmPassword: "secure-passphrase",
+        }),
+      ),
+    ).resolves.toEqual({ status: "error", message: zhCN.auth.authFailed });
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 
   it("verifies a signup OTP", async () => {
@@ -88,9 +115,9 @@ describe("signup email OTP actions", () => {
     ).resolves.toEqual({ status: "error", message: zhCN.auth.otpCodeInvalid });
   });
 
-  it("uses non-creating semantics when resending a verification code", async () => {
-    const signInWithOtp = vi.fn().mockResolvedValue({ error: null });
-    mocks.createClient.mockResolvedValue({ auth: { signInWithOtp } });
+  it("resends a signup verification code without enabling magic-link login", async () => {
+    const resend = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({ auth: { resend } });
 
     await expect(
       resendSignupEmailVerificationAction(
@@ -98,17 +125,17 @@ describe("signup email OTP actions", () => {
         formData({ email: "user@example.com" }),
       ),
     ).resolves.toEqual({ status: "success", message: zhCN.auth.otpCodeSent });
-    expect(signInWithOtp).toHaveBeenCalledWith({
+    expect(resend).toHaveBeenCalledWith({
+      type: "signup",
       email: "user@example.com",
-      options: { shouldCreateUser: false },
     });
   });
 
   it("returns the mapped OTP rate-limit error", async () => {
-    const signInWithOtp = vi.fn().mockResolvedValue({
+    const resend = vi.fn().mockResolvedValue({
       error: { message: "Email rate limit exceeded" },
     });
-    mocks.createClient.mockResolvedValue({ auth: { signInWithOtp } });
+    mocks.createClient.mockResolvedValue({ auth: { resend } });
 
     await expect(
       resendSignupEmailVerificationAction(

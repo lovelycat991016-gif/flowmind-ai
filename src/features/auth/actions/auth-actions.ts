@@ -35,13 +35,18 @@ export async function requestSignupEmailVerificationAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email: result.data.email,
     password: result.data.password,
   });
 
   if (error) {
     return { status: "error", message: mapAuthError(error.message) };
+  }
+
+  if (data.session) {
+    await supabase.auth.signOut();
+    return { status: "error", message: zhCN.auth.authFailed };
   }
 
   const nextPath = formData.get("next");
@@ -91,9 +96,9 @@ export async function resendSignupEmailVerificationAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithOtp({
+  const { error } = await supabase.auth.resend({
+    type: "signup",
     email: result.data.email,
-    options: { shouldCreateUser: false },
   });
 
   if (error) {
@@ -122,41 +127,6 @@ export async function signInAction(
 
   const nextPath = formData.get("next");
   redirect(getSafeInternalPath(typeof nextPath === "string" ? nextPath : null));
-}
-
-export async function signUpAction(
-  _previousState: AuthFormState,
-  formData: FormData,
-): Promise<AuthFormState> {
-  const result = signUpSchema.safeParse(Object.fromEntries(formData));
-
-  if (!result.success) {
-    return { status: "error", message: firstIssueMessage(result.error) };
-  }
-
-  const { appUrl } = getPublicEnv();
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email: result.data.email,
-    password: result.data.password,
-    options: { emailRedirectTo: `${appUrl}/auth/callback?next=/dashboard` },
-  });
-
-  if (error) {
-    return { status: "error", message: mapAuthError(error.message) };
-  }
-
-  if (data.user && data.user.identities?.length === 0) {
-    return {
-      status: "error",
-      message: zhCN.auth.alreadyRegistered,
-    };
-  }
-
-  return {
-    status: "success",
-    message: zhCN.auth.accountConfirmationSent,
-  };
 }
 
 export async function requestPasswordResetAction(
