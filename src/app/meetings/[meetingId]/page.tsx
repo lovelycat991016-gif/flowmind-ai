@@ -30,7 +30,7 @@ export default async function MeetingDetailPage({
         getTranscriptForRecording(recording.id),
         getMeetingIntelligence(meeting.id),
       ])
-    : [null, null, await getMeetingIntelligence(meeting.id)];
+    : [null, null, null];
 
   return (
     <MeetingDetail

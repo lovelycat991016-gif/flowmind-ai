@@ -116,7 +116,7 @@ describe("MeetingDetailPage", () => {
     );
   });
 
-  it("does not query or render processing status when recording is absent", async () => {
+  it("renders a newly created meeting without querying recording-derived data", async () => {
     mocks.getRecordingForMeeting.mockResolvedValue(null);
 
     render(
@@ -127,7 +127,7 @@ describe("MeetingDetailPage", () => {
 
     expect(mocks.getProcessingJobForRecording).not.toHaveBeenCalled();
     expect(mocks.getTranscriptForRecording).not.toHaveBeenCalled();
-    expect(mocks.getMeetingIntelligence).toHaveBeenCalledWith(meeting.id);
+    expect(mocks.getMeetingIntelligence).not.toHaveBeenCalled();
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "none",
