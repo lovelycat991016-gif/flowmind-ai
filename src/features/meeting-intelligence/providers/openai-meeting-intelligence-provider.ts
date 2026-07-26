@@ -15,6 +15,7 @@ const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
 const modelOutputSchema = z.object({
   summary: z.string().trim().min(1).max(10_000),
+  key_points: z.array(z.string().trim().min(1).max(2_000)).max(50),
   decisions: z.array(z.string().trim().min(1).max(2_000)).max(50),
   action_items: z
     .array(
@@ -25,6 +26,7 @@ const modelOutputSchema = z.object({
       }),
     )
     .max(50),
+  risks: z.array(z.string().trim().min(1).max(2_000)).max(50),
 });
 
 type OpenAITransportRequest = {
@@ -63,7 +65,7 @@ function createRequestBody(input: MeetingIntelligenceRequest, model: string) {
   return JSON.stringify({
     model,
     instructions:
-      "Analyze meeting text. Return JSON only with summary, decisions, and action_items. Each action item must have task and may include owner and deadline in YYYY-MM-DD format.",
+      "Analyze meeting text. Return JSON only with summary, key_points, decisions, action_items, and risks. key_points, decisions, and risks are arrays of concise strings. Each action item must have task and may include owner and deadline in YYYY-MM-DD format.",
     input: input.transcriptContent,
     text: { format: { type: "json_object" } },
   });
@@ -86,10 +88,12 @@ function mapOutput(
     modelIdentifier: model,
     promptVersion: input.promptVersion,
     summary: { content: parsed.data.summary },
+    keyPoints: parsed.data.key_points,
     decisions: parsed.data.decisions.map((content) => ({
       content,
       sourceSegmentIndex: null,
     })),
+    risks: parsed.data.risks,
     actionItems: parsed.data.action_items.map((item) => ({
       content: item.task,
       assigneeName: item.owner ?? null,

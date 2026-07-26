@@ -1,7 +1,5 @@
 import {
-  FileText,
   LayoutDashboard,
-  ListChecks,
   Settings,
   Video,
   type LucideIcon,
@@ -23,7 +21,5 @@ export const primaryNavigation: ReadonlyArray<NavigationItem> = [
     href: "/dashboard",
   },
   { label: zhCN.navigation.meetings, icon: Video, href: "/meetings" },
-  { label: zhCN.navigation.summaries, icon: FileText, reserved: true },
-  { label: zhCN.navigation.actionItems, icon: ListChecks, reserved: true },
   { label: zhCN.navigation.settings, icon: Settings, disabled: true },
 ];

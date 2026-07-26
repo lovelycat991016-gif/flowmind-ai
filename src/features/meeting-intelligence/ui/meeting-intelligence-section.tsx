@@ -5,10 +5,42 @@ type Intelligence = {
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
   result: {
     summary: { content: string };
+    keyPoints: string[];
     actionItems: { content: string }[];
     decisions: { content: string }[];
+    risks: string[];
   } | null;
 };
+
+const statusLabels = {
+  queued: zhCN.intelligence.statusQueued,
+  running: zhCN.intelligence.statusRunning,
+  completed: zhCN.intelligence.statusCompleted,
+  failed: zhCN.intelligence.statusFailed,
+  cancelled: zhCN.intelligence.statusCancelled,
+} as const;
+
+function IntelligenceList({
+  label,
+  items,
+}: {
+  label: string;
+  items: { content: string }[] | string[];
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <section>
+      <h3 className="text-sm font-medium">{label}</h3>
+      <ul aria-label={label} className="mt-2 list-disc space-y-1 pl-5 text-sm">
+        {items.map((item, index) => (
+          <li key={index}>{typeof item === "string" ? item : item.content}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function MeetingIntelligenceSection({
   intelligence,
   archived = false,
@@ -16,14 +48,17 @@ export function MeetingIntelligenceSection({
   intelligence: Intelligence | null;
   archived?: boolean;
 }) {
-  const pending =
-    intelligence?.status === "queued" || intelligence?.status === "running";
   const completed = intelligence?.status === "completed" && intelligence.result;
   const result = completed || null;
   return (
     <Card>
       <CardHeader>
         <CardTitle as="h2">{zhCN.intelligence.title}</CardTitle>
+        {intelligence ? (
+          <p className="text-muted-foreground text-sm" role="status">
+            {statusLabels[intelligence.status]}
+          </p>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-5">
         {result ? (
@@ -34,32 +69,22 @@ export function MeetingIntelligenceSection({
               </h3>
               <p className="mt-2 text-sm leading-7">{result.summary.content}</p>
             </section>
-            <section>
-              <h3 className="text-sm font-medium">
-                {zhCN.intelligence.actionItems}
-              </h3>
-              <ul
-                aria-label={zhCN.intelligence.actionItems}
-                className="mt-2 list-disc space-y-1 pl-5 text-sm"
-              >
-                {result.actionItems.map((item, index) => (
-                  <li key={index}>{item.content}</li>
-                ))}
-              </ul>
-            </section>
-            <section>
-              <h3 className="text-sm font-medium">
-                {zhCN.intelligence.decisions}
-              </h3>
-              <ul
-                aria-label={zhCN.intelligence.decisions}
-                className="mt-2 list-disc space-y-1 pl-5 text-sm"
-              >
-                {result.decisions.map((item, index) => (
-                  <li key={index}>{item.content}</li>
-                ))}
-              </ul>
-            </section>
+            <IntelligenceList
+              items={result.keyPoints}
+              label={zhCN.intelligence.keyPoints}
+            />
+            <IntelligenceList
+              items={result.actionItems}
+              label={zhCN.intelligence.actionItems}
+            />
+            <IntelligenceList
+              items={result.decisions}
+              label={zhCN.intelligence.decisions}
+            />
+            <IntelligenceList
+              items={result.risks}
+              label={zhCN.intelligence.risks}
+            />
             {archived ? (
               <p className="text-muted-foreground text-sm">
                 {zhCN.intelligence.archivedReadOnly}
@@ -67,13 +92,13 @@ export function MeetingIntelligenceSection({
             ) : null}
           </>
         ) : (
-          <div role="status" className="text-muted-foreground text-sm">
-            {pending
-              ? zhCN.intelligence.processing
-              : intelligence?.status === "failed" ||
-                  intelligence?.status === "cancelled"
-                ? zhCN.intelligence.unavailable
-                : zhCN.intelligence.empty}
+          <div
+            className="text-muted-foreground text-sm"
+            role={intelligence ? undefined : "status"}
+          >
+            {intelligence
+              ? statusLabels[intelligence.status]
+              : zhCN.intelligence.empty}
           </div>
         )}
       </CardContent>

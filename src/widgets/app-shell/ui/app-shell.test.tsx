@@ -25,8 +25,8 @@ describe("AppShell", () => {
     })[0]!;
     expect(navigation).toHaveTextContent("工作台");
     expect(navigation).toHaveTextContent("会议");
-    expect(navigation).toHaveTextContent("摘要");
-    expect(navigation).toHaveTextContent("行动项");
+    expect(navigation).not.toHaveTextContent("摘要");
+    expect(navigation).not.toHaveTextContent("行动项");
     expect(navigation).toHaveTextContent("设置");
     expect(screen.getAllByRole("link", { name: "会议" })[0]).toHaveAttribute(
       "aria-current",
@@ -37,11 +37,15 @@ describe("AppShell", () => {
     ).not.toHaveAttribute("aria-current");
   });
 
-  it("marks reserved navigation and header utilities unavailable", () => {
+  it("removes completed intelligence placeholders and keeps header utilities unavailable", () => {
     renderShell();
 
-    expect(screen.getAllByRole("button", { name: "摘要" })[0]).toBeDisabled();
-    expect(screen.getAllByRole("button", { name: "行动项" })[0]).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: "摘要" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "行动项" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("searchbox", { name: "搜索会议" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "通知" })).toBeDisabled();
   });

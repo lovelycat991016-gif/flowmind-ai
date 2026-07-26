@@ -13,10 +13,12 @@ const request = {
 
 const output = {
   summary: "团队确认下周发布。",
+  key_points: ["发布负责人已确认"],
   decisions: ["下周三发布。"],
   action_items: [
     { task: "完成发布检查", owner: "李明", deadline: "2026-07-30" },
   ],
+  risks: ["发布前需完成验收"],
 };
 
 describe("OpenAIMeetingIntelligenceProvider", () => {
@@ -37,6 +39,7 @@ describe("OpenAIMeetingIntelligenceProvider", () => {
       modelIdentifier: "gpt-4.1-mini",
       promptVersion: request.promptVersion,
       summary: { content: output.summary },
+      keyPoints: output.key_points,
       decisions: [{ content: output.decisions[0] }],
       actionItems: [
         {
@@ -45,6 +48,7 @@ describe("OpenAIMeetingIntelligenceProvider", () => {
           dueDate: output.action_items[0]?.deadline,
         },
       ],
+      risks: output.risks,
     });
     expect(transport).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -54,19 +58,19 @@ describe("OpenAIMeetingIntelligenceProvider", () => {
         }),
       }),
     );
+    expect(transport.mock.calls[0]?.[0].body).toContain("key_points");
+    expect(transport.mock.calls[0]?.[0].body).toContain("risks");
   });
 
   it("rejects malformed output and provider failures without exposing raw details", async () => {
     const malformed = new OpenAIMeetingIntelligenceProvider({
       apiKey: "server-only-key",
       model: "gpt-4.1-mini",
-      transport: vi
-        .fn()
-        .mockResolvedValue(
-          new Response(JSON.stringify({ output_text: "not json" }), {
-            status: 200,
-          }),
-        ),
+      transport: vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ output_text: "not json" }), {
+          status: 200,
+        }),
+      ),
     });
     const unavailable = new OpenAIMeetingIntelligenceProvider({
       apiKey: "server-only-key",

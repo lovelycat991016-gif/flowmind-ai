@@ -32,13 +32,17 @@ export type MeetingDecision = {
   content: string;
   sourceSegmentIndex: number | null;
 };
+export type MeetingKeyPoint = string;
+export type MeetingRisk = string;
 export type MeetingIntelligenceResult = {
   provider: string;
   modelIdentifier: string;
   promptVersion: string;
   summary: MeetingSummary;
+  keyPoints: MeetingKeyPoint[];
   actionItems: MeetingActionItem[];
   decisions: MeetingDecision[];
+  risks: MeetingRisk[];
   outputMetadata: Record<string, string | number | boolean | null>;
 };
 export type MeetingIntelligence = {

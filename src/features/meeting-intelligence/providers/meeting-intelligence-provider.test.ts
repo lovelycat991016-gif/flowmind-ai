@@ -12,8 +12,10 @@ const output = {
   modelIdentifier: "test-model",
   promptVersion: request.promptVersion,
   summary: { content: "项目按计划推进。" },
+  keyPoints: ["本周完成测试"],
   actionItems: [],
   decisions: [],
+  risks: [],
   outputMetadata: { schemaVersion: "v1" },
 };
 

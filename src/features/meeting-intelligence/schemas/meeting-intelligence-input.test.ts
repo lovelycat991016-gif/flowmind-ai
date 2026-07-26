@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   MAX_ACTION_ITEMS,
   MAX_DECISIONS,
+  MAX_KEY_POINTS,
+  MAX_RISKS,
   MAX_SUMMARY_LENGTH,
   meetingIntelligenceResultSchema,
   meetingIntelligenceTransitionSchema,
@@ -13,6 +15,7 @@ const result = {
   modelIdentifier: "gpt-4.1-mini",
   promptVersion: "meeting_intelligence/v1",
   summary: { content: "项目按计划推进。" },
+  keyPoints: ["发布范围已经确认"],
   actionItems: [
     {
       content: "完成验收文档",
@@ -22,6 +25,7 @@ const result = {
     },
   ],
   decisions: [{ content: "本周发布测试版本", sourceSegmentIndex: 1 }],
+  risks: ["测试环境容量需要提前确认"],
   outputMetadata: { schemaVersion: "v1" },
 };
 
@@ -72,6 +76,38 @@ describe("meeting intelligence validation", () => {
         ),
       }).success,
     ).toBe(false);
+    expect(
+      meetingIntelligenceResultSchema.safeParse({
+        ...result,
+        keyPoints: Array.from(
+          { length: MAX_KEY_POINTS + 1 },
+          () => result.keyPoints[0],
+        ),
+      }).success,
+    ).toBe(false);
+    expect(
+      meetingIntelligenceResultSchema.safeParse({
+        ...result,
+        risks: Array.from({ length: MAX_RISKS + 1 }, () => result.risks[0]),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("keeps legacy completed results readable when optional display fields are absent", () => {
+    const legacyResult = {
+      provider: result.provider,
+      modelIdentifier: result.modelIdentifier,
+      promptVersion: result.promptVersion,
+      summary: result.summary,
+      actionItems: result.actionItems,
+      decisions: result.decisions,
+      outputMetadata: result.outputMetadata,
+    };
+
+    expect(meetingIntelligenceResultSchema.parse(legacyResult)).toMatchObject({
+      keyPoints: [],
+      risks: [],
+    });
   });
 
   it.each([

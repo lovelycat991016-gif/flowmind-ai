@@ -7,6 +7,8 @@ import {
 export const MAX_SUMMARY_LENGTH = 10000;
 export const MAX_ACTION_ITEMS = 50;
 export const MAX_DECISIONS = 50;
+export const MAX_KEY_POINTS = 50;
+export const MAX_RISKS = 50;
 const text = z.string().trim().min(1).max(2000);
 const status = z.enum(meetingIntelligenceGenerationStatuses);
 const metadata = z.record(
@@ -20,6 +22,8 @@ export const meetingIntelligenceResultSchema = z.object({
   summary: z.object({
     content: z.string().trim().min(1).max(MAX_SUMMARY_LENGTH),
   }),
+  // Defaults preserve display compatibility for intelligence generated before v2.
+  keyPoints: z.array(text).max(MAX_KEY_POINTS).default([]),
   actionItems: z
     .array(
       z.object({
@@ -38,6 +42,7 @@ export const meetingIntelligenceResultSchema = z.object({
       }),
     )
     .max(MAX_DECISIONS),
+  risks: z.array(text).max(MAX_RISKS).default([]),
   outputMetadata: metadata,
 });
 const allowed: Readonly<
