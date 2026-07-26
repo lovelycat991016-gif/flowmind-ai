@@ -29,6 +29,7 @@ describe("Supabase production contract", () => {
       "202607250001_repair_meeting_intelligence_worker.sql",
       "202607250002_restrict_meeting_intelligence_claim_rpc.sql",
       "202607250003_add_manual_intelligence_input.sql",
+      "202607260001_complete_transcription_with_intelligence.sql",
     ]);
   });
 
@@ -47,6 +48,9 @@ describe("Supabase production contract", () => {
     ).toContain(
       "grant execute on function public.claim_next_meeting_intelligence(text, integer) to service_role",
     );
+    expect(
+      migration("202607260001_complete_transcription_with_intelligence.sql"),
+    ).toContain("insert into public.meeting_intelligence");
   });
 
   it("provides a production QA checklist and private beta runbook", () => {

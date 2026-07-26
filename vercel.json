@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/meeting-intelligence",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/transcription",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
