@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { MeetingDetail as MeetingDetailModel } from "@/entities/meeting/model/meeting";
 import type { Recording } from "@/entities/recording/model/recording";
 import type { ProcessingJob } from "@/entities/processing-job/model/processing-job";
+import type { MeetingAiMessage } from "@/entities/meeting-ai-message/model/meeting-ai-message";
 import type { TranscriptWithSegments } from "@/features/transcription/queries/get-transcript-for-recording";
 import { formatMeetingDate } from "@/entities/meeting/model/meeting";
 import { RenameMeetingForm } from "@/features/meetings/ui/rename-meeting-form";
@@ -17,6 +18,7 @@ import { MeetingRecordingSection } from "./meeting-recording-section";
 import { TranscriptSection } from "@/features/transcription/ui/transcript-section";
 import { MeetingIntelligenceSection } from "@/features/meeting-intelligence/ui/meeting-intelligence-section";
 import { ManualIntelligenceForm } from "@/features/meeting-intelligence/ui/manual-intelligence-form";
+import { MeetingCopilotSection } from "@/features/meeting-copilot/ui/meeting-copilot-section";
 
 export function MeetingDetail({
   meeting,
@@ -24,6 +26,7 @@ export function MeetingDetail({
   recording = null,
   transcript = null,
   intelligence = null,
+  copilotMessages = [],
 }: {
   meeting: MeetingDetailModel;
   processingJob?: ProcessingJob | null;
@@ -32,6 +35,7 @@ export function MeetingDetail({
   intelligence?: Parameters<
     typeof MeetingIntelligenceSection
   >[0]["intelligence"];
+  copilotMessages?: MeetingAiMessage[];
 }) {
   const isArchived = Boolean(meeting.archivedAt);
   const intelligencePending =
@@ -84,6 +88,11 @@ export function MeetingDetail({
       <MeetingIntelligenceSection
         archived={isArchived}
         intelligence={intelligence}
+      />
+      <MeetingCopilotSection
+        archived={isArchived}
+        meetingId={meeting.id}
+        messages={copilotMessages}
       />
       <Card>
         <CardHeader>

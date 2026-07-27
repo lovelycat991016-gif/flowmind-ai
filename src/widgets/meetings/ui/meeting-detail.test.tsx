@@ -45,5 +45,8 @@ describe("MeetingDetail", () => {
     expect(
       screen.getByRole("button", { name: "删除会议" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "会议 Copilot" }),
+    ).toBeInTheDocument();
   });
 });

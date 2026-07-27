@@ -5,6 +5,7 @@ import { getRecordingForMeeting } from "@/features/recordings/queries/get-record
 import { getProcessingJobForRecording } from "@/features/processing-jobs/queries/get-processing-job-for-recording";
 import { getTranscriptForRecording } from "@/features/transcription/queries/get-transcript-for-recording";
 import { getMeetingIntelligence } from "@/features/meeting-intelligence/queries/get-meeting-intelligence";
+import { getMeetingAiMessages } from "@/features/meeting-copilot/queries/get-meeting-ai-messages";
 import { meetingIdSchema } from "@/features/meetings/schemas/meeting-input";
 import { MeetingDetail } from "@/widgets/meetings/ui/meeting-detail";
 import { zhCN } from "@/shared/i18n/zh-CN";
@@ -25,13 +26,19 @@ export default async function MeetingDetailPage({
 
   const recording = await getRecordingForMeeting(meeting.id);
   const intelligencePromise = getMeetingIntelligence(meeting.id);
-  const [processingJob, transcript, intelligence] = recording
+  const [processingJob, transcript, intelligence, copilotMessages] = recording
     ? await Promise.all([
         getProcessingJobForRecording(recording.id),
         getTranscriptForRecording(recording.id),
         intelligencePromise,
+        getMeetingAiMessages(meeting.id),
       ])
-    : [null, null, await intelligencePromise];
+    : [
+        null,
+        null,
+        await intelligencePromise,
+        await getMeetingAiMessages(meeting.id),
+      ];
 
   return (
     <MeetingDetail
@@ -40,6 +47,7 @@ export default async function MeetingDetailPage({
       recording={recording}
       transcript={transcript}
       intelligence={intelligence}
+      copilotMessages={copilotMessages}
     />
   );
 }
