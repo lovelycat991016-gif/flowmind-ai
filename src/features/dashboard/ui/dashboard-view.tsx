@@ -1,4 +1,6 @@
 import type { DashboardMeetingData } from "@/entities/meeting/model/meeting";
+import type { DashboardAttention } from "@/features/dashboard/queries/get-dashboard-attention";
+import { AiAttentionPanel } from "@/widgets/dashboard/ui/ai-attention-panel";
 import { BetaOnboarding } from "@/widgets/dashboard/ui/beta-onboarding";
 import { QuickActions } from "@/widgets/dashboard/ui/quick-actions";
 import { RecentMeetings } from "@/widgets/dashboard/ui/recent-meetings";
@@ -9,9 +11,18 @@ import { zhCN } from "@/shared/i18n/zh-CN";
 export function DashboardView({
   userName,
   data,
+  attention = {
+    todayMeetingCount: 0,
+    completedIntelligenceCount: 0,
+    openTaskCount: 0,
+    riskReminders: [],
+    recentDecisions: [],
+    recentActivities: [],
+  },
 }: {
   userName: string;
   data: DashboardMeetingData;
+  attention?: DashboardAttention;
 }) {
   const statistics = [
     {
@@ -96,6 +107,10 @@ export function DashboardView({
           <BetaOnboarding />
         </div>
       ) : null}
+
+      <div className="mt-6 xl:mt-8">
+        <AiAttentionPanel attention={attention} />
+      </div>
 
       <div className="mt-6 grid items-start gap-6 xl:mt-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)]">
         <RecentMeetings meetings={data.recentMeetings} />

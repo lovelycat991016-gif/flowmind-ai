@@ -30,6 +30,18 @@ export function DashboardLoading() {
         ))}
       </div>
 
+      <Card className="mt-6" data-testid="loading-ai-workspace">
+        <CardContent className="space-y-3 p-6">
+          <Skeleton className="h-5 w-28" />
+          <div className="grid gap-2 sm:grid-cols-3">
+            {Array.from({ length: 3 }, (_, index) => (
+              <Skeleton className="h-12" key={index} />
+            ))}
+          </div>
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
+      </Card>
+
       <div className="mt-6 grid items-start gap-6 xl:mt-8 xl:grid-cols-[minmax(0,1.65fr)_minmax(300px,0.75fr)]">
         <Card data-testid="loading-recent-meetings">
           <CardContent className="space-y-5 p-6">
