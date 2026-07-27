@@ -15,6 +15,56 @@ export const zhCN = {
     previous: "上一页",
     next: "下一页",
   },
+  landing: {
+    eyebrow: "FlowMind AI 会议工作台",
+    heroTitle: "让每场会议都有结果",
+    heroDescription:
+      "从私密录音到转录、摘要、决策与行动项，FlowMind 将会议讨论沉淀为团队可执行的下一步。",
+    start: "免费开始使用",
+    signIn: "登录",
+    capabilitiesTitle: "不止记录，更让会议推动工作",
+    capabilitiesDescription:
+      "围绕现有会议流程构建，帮助团队更快回顾共识、跟进责任与处理风险。",
+    capabilities: {
+      assistant: {
+        title: "AI 会议助手",
+        description: "在同一处查看会议上下文与关键进展。",
+      },
+      transcription: {
+        title: "自动转录",
+        description: "将私密会议录音转换为可回顾的文字内容。",
+      },
+      summary: {
+        title: "AI 摘要",
+        description: "快速聚焦讨论重点、结论与后续方向。",
+      },
+      actionItems: {
+        title: "行动项管理",
+        description: "把会议中的待办转成可追踪的行动任务。",
+      },
+      copilot: {
+        title: "会议 Copilot",
+        description: "围绕会议内容提问，获得清晰的协作提示。",
+      },
+    },
+    workflowTitle: "使用流程",
+    workflow: [
+      {
+        title: "创建会议",
+        description: "记录会议主题与时间，建立统一工作上下文。",
+      },
+      {
+        title: "上传并整理",
+        description: "上传录音，集中查看转录和会议智能结果。",
+      },
+      {
+        title: "推进下一步",
+        description: "跟进决策、风险和行动项，让共识真正落地。",
+      },
+    ],
+    ctaTitle: "把下一场会议变成下一步行动",
+    ctaDescription: "创建你的 FlowMind 工作台，开始沉淀重要会议成果。",
+  },
   navigation: {
     dashboard: "工作台",
     meetings: "会议",
