@@ -47,21 +47,34 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
     .order("meeting_date", { ascending: false })
     .order("id", { ascending: false })
     .limit(4);
+  const openTasksQuery = supabase
+    .from("action_items")
+    .select("id", { count: "exact", head: true })
+    .in("status", ["open", "in_progress"]);
+  const completedTasksQuery = supabase
+    .from("action_items")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "completed");
 
-  const [total, active, archived, thisWeek, recent] = await Promise.all([
-    totalQuery,
-    activeQuery,
-    archivedQuery,
-    thisWeekQuery,
-    recentQuery,
-  ]);
+  const [total, active, archived, thisWeek, recent, openTasks, completedTasks] =
+    await Promise.all([
+      totalQuery,
+      activeQuery,
+      archivedQuery,
+      thisWeekQuery,
+      recentQuery,
+      openTasksQuery,
+      completedTasksQuery,
+    ]);
 
   if (
     total.error ||
     active.error ||
     archived.error ||
     thisWeek.error ||
-    recent.error
+    recent.error ||
+    openTasks.error ||
+    completedTasks.error
   ) {
     reportServerEvent({
       category: "supabase",
@@ -79,6 +92,8 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
       active: active.count ?? 0,
       archived: archived.count ?? 0,
       thisWeek: thisWeek.count ?? 0,
+      openTasks: openTasks.count ?? 0,
+      completedTasks: completedTasks.count ?? 0,
     },
     recentMeetings: ((recent.data ?? []) as MeetingRow[]).map(mapMeetingRow),
   };

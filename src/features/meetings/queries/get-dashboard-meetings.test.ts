@@ -26,6 +26,8 @@ function countQuery(count: number) {
     is: vi.fn(),
     not: vi.fn(),
     gte: vi.fn(),
+    in: vi.fn(),
+    eq: vi.fn(),
     then: (resolve: (value: { count: number; error: null }) => unknown) =>
       Promise.resolve({ count, error: null }).then(resolve),
   };
@@ -33,6 +35,8 @@ function countQuery(count: number) {
   query.is.mockReturnValue(query);
   query.not.mockReturnValue(query);
   query.gte.mockReturnValue(query);
+  query.in.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
   return query;
 }
 
@@ -44,6 +48,8 @@ it("derives dashboard metrics and recent meetings from meetings queries", async 
   const active = countQuery(8);
   const archived = countQuery(4);
   const thisWeek = countQuery(3);
+  const openTasks = countQuery(5);
+  const completedTasks = countQuery(2);
   const recent = {
     select: vi.fn(),
     is: vi.fn(),
@@ -66,8 +72,13 @@ it("derives dashboard metrics and recent meetings from meetings queries", async 
   recent.is.mockReturnValue(recent);
   recent.order.mockReturnValue(recent);
 
-  const queries = [total, active, archived, thisWeek, recent];
-  const from = vi.fn().mockImplementation(() => queries.shift());
+  const meetingQueries = [total, active, archived, thisWeek, recent];
+  const actionItemQueries = [openTasks, completedTasks];
+  const from = vi
+    .fn()
+    .mockImplementation((table: string) =>
+      table === "meetings" ? meetingQueries.shift() : actionItemQueries.shift(),
+    );
   createClientMock.mockResolvedValue({ from });
 
   const result = await getDashboardMeetingData();
@@ -83,11 +94,15 @@ it("derives dashboard metrics and recent meetings from meetings queries", async 
     "2026-07-13T00:00:00.000Z",
   );
   expect(recent.limit).toHaveBeenCalledWith(4);
+  expect(openTasks.in).toHaveBeenCalledWith("status", ["open", "in_progress"]);
+  expect(completedTasks.eq).toHaveBeenCalledWith("status", "completed");
   expect(result.metrics).toEqual({
     total: 12,
     active: 8,
     archived: 4,
     thisWeek: 3,
+    openTasks: 5,
+    completedTasks: 2,
   });
   expect(result.recentMeetings[0]?.title).toBe("Product weekly");
 });
@@ -117,7 +132,9 @@ it("reports a safe structured event for a failing Supabase query", async () => {
       .mockReturnValueOnce(query)
       .mockReturnValueOnce(query)
       .mockReturnValueOnce(query)
-      .mockReturnValueOnce(recent),
+      .mockReturnValueOnce(recent)
+      .mockReturnValueOnce(query)
+      .mockReturnValueOnce(query),
   });
   await expect(getDashboardMeetingData()).rejects.toThrow(
     "Unable to load dashboard meeting data.",

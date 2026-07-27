@@ -19,6 +19,8 @@ export type DashboardMeetingMetrics = {
   active: number;
   archived: number;
   thisWeek: number;
+  openTasks: number;
+  completedTasks: number;
 };
 
 export type DashboardMeetingData = {

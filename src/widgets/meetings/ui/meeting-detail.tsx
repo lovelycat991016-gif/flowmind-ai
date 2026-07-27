@@ -4,6 +4,7 @@ import type { MeetingDetail as MeetingDetailModel } from "@/entities/meeting/mod
 import type { Recording } from "@/entities/recording/model/recording";
 import type { ProcessingJob } from "@/entities/processing-job/model/processing-job";
 import type { MeetingAiMessage } from "@/entities/meeting-ai-message/model/meeting-ai-message";
+import type { ActionItem } from "@/entities/action-item/model/action-item";
 import type { TranscriptWithSegments } from "@/features/transcription/queries/get-transcript-for-recording";
 import { formatMeetingDate } from "@/entities/meeting/model/meeting";
 import { RenameMeetingForm } from "@/features/meetings/ui/rename-meeting-form";
@@ -19,6 +20,7 @@ import { TranscriptSection } from "@/features/transcription/ui/transcript-sectio
 import { MeetingIntelligenceSection } from "@/features/meeting-intelligence/ui/meeting-intelligence-section";
 import { ManualIntelligenceForm } from "@/features/meeting-intelligence/ui/manual-intelligence-form";
 import { MeetingCopilotSection } from "@/features/meeting-copilot/ui/meeting-copilot-section";
+import { MeetingActionItemsSection } from "@/features/action-items/ui/meeting-action-items-section";
 
 export function MeetingDetail({
   meeting,
@@ -27,6 +29,7 @@ export function MeetingDetail({
   transcript = null,
   intelligence = null,
   copilotMessages = [],
+  actionItems = [],
 }: {
   meeting: MeetingDetailModel;
   processingJob?: ProcessingJob | null;
@@ -36,6 +39,7 @@ export function MeetingDetail({
     typeof MeetingIntelligenceSection
   >[0]["intelligence"];
   copilotMessages?: MeetingAiMessage[];
+  actionItems?: ActionItem[];
 }) {
   const isArchived = Boolean(meeting.archivedAt);
   const intelligencePending =
@@ -93,6 +97,12 @@ export function MeetingDetail({
         archived={isArchived}
         meetingId={meeting.id}
         messages={copilotMessages}
+      />
+      <MeetingActionItemsSection
+        archived={isArchived}
+        intelligence={intelligence}
+        meetingId={meeting.id}
+        tasks={actionItems}
       />
       <Card>
         <CardHeader>

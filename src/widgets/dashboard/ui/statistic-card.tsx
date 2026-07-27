@@ -2,6 +2,8 @@ import {
   CalendarDays,
   Archive,
   CalendarRange,
+  CheckCircle2,
+  CircleDot,
   Layers3,
   type LucideIcon,
 } from "lucide-react";
@@ -12,13 +14,21 @@ type Statistic = {
   label: string;
   value: number;
   context: string;
-  icon: "total" | "active" | "archived" | "week";
+  icon:
+    | "total"
+    | "active"
+    | "archived"
+    | "week"
+    | "open-actions"
+    | "completed-actions";
 };
 const icons: Record<Statistic["icon"], LucideIcon> = {
   total: Layers3,
   active: CalendarDays,
   archived: Archive,
   week: CalendarRange,
+  "open-actions": CircleDot,
+  "completed-actions": CheckCircle2,
 };
 
 export function StatisticCard({ statistic }: { statistic: Statistic }) {

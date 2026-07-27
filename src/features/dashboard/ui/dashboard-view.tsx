@@ -42,6 +42,20 @@ export function DashboardView({
       context: zhCN.dashboard.activeMeetings,
       icon: "week" as const,
     },
+    {
+      id: "open-actions",
+      label: zhCN.dashboard.openTasks,
+      value: data.metrics.openTasks,
+      context: zhCN.actionItems.status.open,
+      icon: "open-actions" as const,
+    },
+    {
+      id: "completed-actions",
+      label: zhCN.dashboard.completedTasks,
+      value: data.metrics.completedTasks,
+      context: zhCN.actionItems.status.completed,
+      icon: "completed-actions" as const,
+    },
   ];
   const actions = [
     {

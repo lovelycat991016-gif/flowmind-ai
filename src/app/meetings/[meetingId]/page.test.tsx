@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   getTranscriptForRecording: vi.fn(),
   getMeetingIntelligence: vi.fn(),
   getMeetingAiMessages: vi.fn(),
+  getActionItemsForMeeting: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({ notFound: vi.fn() }));
@@ -35,6 +36,9 @@ vi.mock(
 );
 vi.mock("@/features/meeting-copilot/queries/get-meeting-ai-messages", () => ({
   getMeetingAiMessages: mocks.getMeetingAiMessages,
+}));
+vi.mock("@/features/action-items/queries/get-action-items-for-meeting", () => ({
+  getActionItemsForMeeting: mocks.getActionItemsForMeeting,
 }));
 vi.mock("@/widgets/meetings/ui/meeting-detail", () => ({
   MeetingDetail: ({
@@ -85,6 +89,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.getMeetingById.mockResolvedValue(meeting);
   mocks.getMeetingAiMessages.mockResolvedValue([]);
+  mocks.getActionItemsForMeeting.mockResolvedValue([]);
 });
 
 describe("MeetingDetailPage", () => {
@@ -108,6 +113,7 @@ describe("MeetingDetailPage", () => {
     expect(mocks.getTranscriptForRecording).toHaveBeenCalledWith(recording.id);
     expect(mocks.getMeetingIntelligence).toHaveBeenCalledWith(meeting.id);
     expect(mocks.getMeetingAiMessages).toHaveBeenCalledWith(meeting.id);
+    expect(mocks.getActionItemsForMeeting).toHaveBeenCalledWith(meeting.id);
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "queued",
@@ -136,6 +142,7 @@ describe("MeetingDetailPage", () => {
     expect(mocks.getTranscriptForRecording).not.toHaveBeenCalled();
     expect(mocks.getMeetingIntelligence).toHaveBeenCalledWith(meeting.id);
     expect(mocks.getMeetingAiMessages).toHaveBeenCalledWith(meeting.id);
+    expect(mocks.getActionItemsForMeeting).toHaveBeenCalledWith(meeting.id);
     expect(screen.getByTestId("processing-status")).toHaveAttribute(
       "data-processing-status",
       "none",

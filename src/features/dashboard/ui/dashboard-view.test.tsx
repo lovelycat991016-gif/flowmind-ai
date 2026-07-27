@@ -18,17 +18,19 @@ describe("DashboardView", () => {
     ).toBeVisible();
   });
 
-  it("renders four query-derived meeting statistics", () => {
+  it("renders meeting and task statistics", () => {
     render(<DashboardView userName="Alex" data={data} />);
     const statistics = screen.getAllByTestId("statistic-card");
 
-    expect(statistics).toHaveLength(4);
+    expect(statistics).toHaveLength(6);
     expect(statistics.map((card) => card.textContent)).toEqual(
       expect.arrayContaining([
         expect.stringContaining("12全部会议"),
         expect.stringContaining("8进行中的会议"),
         expect.stringContaining("4已归档会议"),
         expect.stringContaining("3本周会议"),
+        expect.stringContaining("5待完成任务"),
+        expect.stringContaining("2已完成任务"),
       ]),
     );
   });
@@ -62,7 +64,7 @@ describe("DashboardView", () => {
       <DashboardView
         userName="Alex"
         data={{
-          metrics: { total: 0, active: 0, archived: 0, thisWeek: 0 },
+          metrics: { total: 0, active: 0, archived: 0, thisWeek: 0, openTasks: 0, completedTasks: 0 },
           recentMeetings: [],
         }}
       />,
@@ -81,7 +83,7 @@ describe("DashboardView", () => {
 });
 
 const data = {
-  metrics: { total: 12, active: 8, archived: 4, thisWeek: 3 },
+  metrics: { total: 12, active: 8, archived: 4, thisWeek: 3, openTasks: 5, completedTasks: 2 },
   recentMeetings: [
     {
       id: "6b79f5f3-f083-4a75-b74b-41342f2b1454",

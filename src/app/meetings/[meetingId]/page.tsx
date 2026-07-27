@@ -6,6 +6,7 @@ import { getProcessingJobForRecording } from "@/features/processing-jobs/queries
 import { getTranscriptForRecording } from "@/features/transcription/queries/get-transcript-for-recording";
 import { getMeetingIntelligence } from "@/features/meeting-intelligence/queries/get-meeting-intelligence";
 import { getMeetingAiMessages } from "@/features/meeting-copilot/queries/get-meeting-ai-messages";
+import { getActionItemsForMeeting } from "@/features/action-items/queries/get-action-items-for-meeting";
 import { meetingIdSchema } from "@/features/meetings/schemas/meeting-input";
 import { MeetingDetail } from "@/widgets/meetings/ui/meeting-detail";
 import { zhCN } from "@/shared/i18n/zh-CN";
@@ -26,18 +27,26 @@ export default async function MeetingDetailPage({
 
   const recording = await getRecordingForMeeting(meeting.id);
   const intelligencePromise = getMeetingIntelligence(meeting.id);
-  const [processingJob, transcript, intelligence, copilotMessages] = recording
+  const [
+    processingJob,
+    transcript,
+    intelligence,
+    copilotMessages,
+    actionItems,
+  ] = recording
     ? await Promise.all([
         getProcessingJobForRecording(recording.id),
         getTranscriptForRecording(recording.id),
         intelligencePromise,
         getMeetingAiMessages(meeting.id),
+        getActionItemsForMeeting(meeting.id),
       ])
     : [
         null,
         null,
         await intelligencePromise,
         await getMeetingAiMessages(meeting.id),
+        await getActionItemsForMeeting(meeting.id),
       ];
 
   return (
@@ -48,6 +57,7 @@ export default async function MeetingDetailPage({
       transcript={transcript}
       intelligence={intelligence}
       copilotMessages={copilotMessages}
+      actionItems={actionItems}
     />
   );
 }
