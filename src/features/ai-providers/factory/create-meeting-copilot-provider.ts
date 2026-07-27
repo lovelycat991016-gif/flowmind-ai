@@ -5,14 +5,7 @@ import type {
   MeetingCopilotRequest,
   MeetingCopilotResponse,
 } from "@/features/meeting-copilot/providers/meeting-copilot-provider";
-
-function systemInstruction() {
-  return "You are FlowMind Meeting Copilot. Answer in Chinese using only the supplied meeting context. If the context does not contain the answer, say so plainly. Never invent meeting facts.";
-}
-
-function inputFor(request: MeetingCopilotRequest) {
-  return `Meeting title: ${request.meetingTitle}\n\nMeeting context:\n${request.context}\n\nUser question: ${request.prompt}`;
-}
+import { buildMeetingCopilotPrompt } from "@/features/ai-providers/prompts/meeting-copilot-prompt";
 
 class FactoryMeetingCopilotProvider implements MeetingCopilotProvider {
   constructor(private readonly provider: AIProvider) {}
@@ -21,9 +14,14 @@ class FactoryMeetingCopilotProvider implements MeetingCopilotProvider {
     request: MeetingCopilotRequest,
   ): Promise<MeetingCopilotResponse> {
     try {
+      const prompt = buildMeetingCopilotPrompt({
+        meetingTitle: request.meetingTitle,
+        context: request.context,
+        question: request.prompt,
+      });
       const content = await this.provider.generateTextResponse({
-        system: systemInstruction(),
-        input: inputFor(request),
+        system: prompt.system,
+        input: prompt.input,
       });
       if (!content.trim()) throw new Error("Empty meeting Copilot response.");
       return {

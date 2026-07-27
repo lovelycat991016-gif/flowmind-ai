@@ -3,6 +3,7 @@ import type {
   MeetingIntelligenceResult,
 } from "@/entities/meeting-intelligence/model/meeting-intelligence";
 import type { MeetingIntelligenceProvider } from "@/features/meeting-intelligence/providers/meeting-intelligence-provider";
+import { MEETING_INTELLIGENCE_PROMPT_VERSION } from "@/features/ai-providers/prompts/meeting-intelligence-prompt";
 import { createMeetingIntelligenceWorkerRepository } from "./meeting-intelligence-repository";
 
 export type ClaimedMeetingIntelligence = {
@@ -57,7 +58,7 @@ export async function executeNextMeetingIntelligence(input: {
     const result = await input.provider.generate({
       transcriptContent: source.content,
       transcriptLanguage: source.language,
-      promptVersion: "meeting_intelligence/v1",
+      promptVersion: MEETING_INTELLIGENCE_PROMPT_VERSION,
     });
     await input.dependencies.complete(job, result);
     return { status: "completed" as const, jobId: job.id };

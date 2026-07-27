@@ -10,7 +10,7 @@ const job = {
 const result = {
   provider: "p",
   modelIdentifier: "m",
-  promptVersion: "meeting_intelligence/v1",
+  promptVersion: "meeting_intelligence/v2",
   summary: { content: "s" },
   actionItems: [],
   decisions: [],

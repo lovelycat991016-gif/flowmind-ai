@@ -15,6 +15,7 @@ import {
   type MeetingIntelligenceProvider,
 } from "@/features/meeting-intelligence/providers/meeting-intelligence-provider";
 import { meetingIntelligenceResultSchema } from "@/features/meeting-intelligence/schemas/meeting-intelligence-input";
+import { buildMeetingIntelligencePrompt } from "@/features/ai-providers/prompts/meeting-intelligence-prompt";
 
 const outputSchema = z.object({
   summary: z.string().trim().min(1).max(10_000),
@@ -47,10 +48,6 @@ function mapProviderError(error: unknown): MeetingIntelligenceFailureCode {
   return codes[error.code];
 }
 
-function systemInstruction(language: string | null) {
-  return `Analyze the meeting transcript${language ? ` in ${language}` : ""}. Return JSON only with summary, key_points, decisions, action_items, and risks. Each action item may contain task, owner, and deadline in YYYY-MM-DD format.`;
-}
-
 class FactoryMeetingIntelligenceProvider implements MeetingIntelligenceProvider {
   constructor(private readonly provider: AIProvider) {}
 
@@ -59,9 +56,10 @@ class FactoryMeetingIntelligenceProvider implements MeetingIntelligenceProvider 
   ): Promise<MeetingIntelligenceResult> {
     let output: unknown;
     try {
+      const prompt = buildMeetingIntelligencePrompt(input.transcriptLanguage);
       output = await this.provider.generateStructuredOutput({
-        system: systemInstruction(input.transcriptLanguage),
-        input: input.transcriptContent,
+        system: prompt.system,
+        input: prompt.input(input.transcriptContent),
       });
     } catch (error) {
       throw new MeetingIntelligenceProviderError(mapProviderError(error));
