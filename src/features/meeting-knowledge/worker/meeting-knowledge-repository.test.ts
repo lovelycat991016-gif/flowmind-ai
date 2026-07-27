@@ -28,4 +28,16 @@ describe("meeting knowledge repository", () => {
     await expect(repository.complete(job)).rejects.toThrow("Unable to complete");
     expect(completionQuery.eq).toHaveBeenCalledWith("locked_by", "worker-a");
   });
+
+  it("persists embeddings with transcript, owner, and chunk-index filters", async () => {
+    const persistenceQuery = query({ error: null });
+    client.from.mockReturnValue(persistenceQuery);
+    await createMeetingKnowledgeRepository().saveEmbeddings(
+      { id: "j", meetingId: "m", userId: "owner", transcriptId: "t", lockedBy: "w" },
+      [Array(1536).fill(0)],
+    );
+    expect(persistenceQuery.eq).toHaveBeenCalledWith("transcript_id", "t");
+    expect(persistenceQuery.eq).toHaveBeenCalledWith("user_id", "owner");
+    expect(persistenceQuery.eq).toHaveBeenCalledWith("chunk_index", 0);
+  });
 });
