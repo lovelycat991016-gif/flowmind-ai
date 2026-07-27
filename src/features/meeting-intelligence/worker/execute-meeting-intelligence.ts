@@ -4,6 +4,7 @@ import type {
 } from "@/entities/meeting-intelligence/model/meeting-intelligence";
 import type { MeetingIntelligenceProvider } from "@/features/meeting-intelligence/providers/meeting-intelligence-provider";
 import { MEETING_INTELLIGENCE_PROMPT_VERSION } from "@/features/ai-providers/prompts/meeting-intelligence-prompt";
+import { recordServerAiUsageEvent } from "@/features/ai-usage/record-ai-usage-event";
 import { createMeetingIntelligenceWorkerRepository } from "./meeting-intelligence-repository";
 
 export type ClaimedMeetingIntelligence = {
@@ -53,6 +54,7 @@ export async function executeNextMeetingIntelligence(input: {
   if (!job) return { status: "idle" as const };
   if (job.lockedBy !== input.workerId)
     throw new Error("Unable to execute meeting intelligence.");
+  const startedAt = Date.now();
   try {
     const source = await input.dependencies.loadInput(job);
     const result = await input.provider.generate({
@@ -61,6 +63,17 @@ export async function executeNextMeetingIntelligence(input: {
       promptVersion: MEETING_INTELLIGENCE_PROMPT_VERSION,
     });
     await input.dependencies.complete(job, result);
+    await recordServerAiUsageEvent({
+      userId: job.userId,
+      meetingId: job.meetingId,
+      meetingIntelligenceId: job.id,
+      operationType: "meeting_intelligence_generation",
+      provider: result.provider,
+      modelIdentifier: result.modelIdentifier,
+      outcome: "completed",
+      failureCode: null,
+      latencyMs: Date.now() - startedAt,
+    });
     return { status: "completed" as const, jobId: job.id };
   } catch (error) {
     const failureCode = code(error);
@@ -69,6 +82,17 @@ export async function executeNextMeetingIntelligence(input: {
     } catch {
       throw new Error("Unable to execute meeting intelligence.");
     }
+    await recordServerAiUsageEvent({
+      userId: job.userId,
+      meetingId: job.meetingId,
+      meetingIntelligenceId: job.id,
+      operationType: "meeting_intelligence_generation",
+      provider: null,
+      modelIdentifier: null,
+      outcome: "failed",
+      failureCode,
+      latencyMs: Date.now() - startedAt,
+    });
     return { status: "failed" as const, jobId: job.id, code: failureCode };
   }
 }

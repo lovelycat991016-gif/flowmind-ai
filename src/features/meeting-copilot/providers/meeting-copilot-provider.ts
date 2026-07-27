@@ -10,6 +10,7 @@ export type MeetingCopilotRequest = {
 export type MeetingCopilotResponse = {
   content: string;
   provider: AIProviderId;
+  modelIdentifier?: string | null;
 };
 
 export interface MeetingCopilotProvider {

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createMeetingCopilotProvider } from "@/features/ai-providers/factory/create-meeting-copilot-provider";
 import { buildMeetingCopilotContext } from "@/features/meeting-copilot/context/build-meeting-copilot-context";
+import { recordServerAiUsageEvent } from "@/features/ai-usage/record-ai-usage-event";
 import type { MeetingCopilotProvider } from "@/features/meeting-copilot/providers/meeting-copilot-provider";
 import { meetingCopilotPromptSchema } from "@/features/meeting-copilot/schemas/meeting-copilot-input";
 import { zhCN } from "@/shared/i18n/zh-CN";
@@ -75,6 +76,7 @@ export async function sendMeetingCopilotMessageAction(
     };
   }
 
+  const startedAt = Date.now();
   try {
     const context = await buildMeetingCopilotContext({
       meetingId: meeting.id,
@@ -97,7 +99,27 @@ export async function sendMeetingCopilotMessageAction(
         content: response.content,
       });
     if (assistantMessageError) throw assistantMessageError;
+    await recordServerAiUsageEvent({
+      userId: user.id,
+      meetingId: meeting.id,
+      operationType: "meeting_copilot_response",
+      provider: response.provider,
+      modelIdentifier: response.modelIdentifier ?? null,
+      outcome: "completed",
+      failureCode: null,
+      latencyMs: Date.now() - startedAt,
+    });
   } catch {
+    await recordServerAiUsageEvent({
+      userId: user.id,
+      meetingId: meeting.id,
+      operationType: "meeting_copilot_response",
+      provider: null,
+      modelIdentifier: null,
+      outcome: "failed",
+      failureCode: "provider_request_failed",
+      latencyMs: Date.now() - startedAt,
+    });
     return {
       status: "error",
       message: zhCN.copilot.sendFailed,

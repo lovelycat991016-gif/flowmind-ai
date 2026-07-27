@@ -27,6 +27,7 @@ class FactoryMeetingCopilotProvider implements MeetingCopilotProvider {
       return {
         content: content.trim(),
         provider: this.provider.metadata.provider,
+        modelIdentifier: this.provider.metadata.model,
       };
     } catch {
       throw new Error("Unable to generate meeting Copilot response.");

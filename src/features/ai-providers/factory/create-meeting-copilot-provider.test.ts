@@ -19,7 +19,11 @@ describe("meeting Copilot provider factory", () => {
         prompt: "下一步是什么？",
         context: "行动项\n- 完成验收",
       }),
-    ).resolves.toEqual({ content: "请先完成验收。", provider: "deepseek" });
+    ).resolves.toEqual({
+      content: "请先完成验收。",
+      provider: "deepseek",
+      modelIdentifier: "deepseek-chat",
+    });
     expect(generateTextResponse).toHaveBeenCalledWith(
       expect.objectContaining({ input: expect.stringContaining("完成验收") }),
     );
