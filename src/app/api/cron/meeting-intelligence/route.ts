@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { OpenAIMeetingIntelligenceProvider } from "@/features/meeting-intelligence/providers/openai-meeting-intelligence-provider";
+import { createMeetingIntelligenceProvider } from "@/features/ai-providers/factory/create-meeting-intelligence-provider";
 import { executeNextMeetingIntelligenceWithServiceRole } from "@/features/meeting-intelligence/worker/execute-meeting-intelligence";
 import { authorizeConfiguredWorkerRequest } from "@/features/transcription/worker/worker-auth";
-import { getOpenAIEnv } from "@/shared/config/openai-env";
 
 const workerId = "meeting-intelligence-cron";
 const leaseSeconds = 300;
@@ -14,11 +13,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { apiKey, model } = getOpenAIEnv();
     const result = await executeNextMeetingIntelligenceWithServiceRole({
       workerId,
       leaseSeconds,
-      provider: new OpenAIMeetingIntelligenceProvider({ apiKey, model }),
+      provider: createMeetingIntelligenceProvider(),
     });
     return NextResponse.json({ status: result.status });
   } catch {
