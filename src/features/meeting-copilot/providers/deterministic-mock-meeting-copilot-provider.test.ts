@@ -9,6 +9,7 @@ describe("DeterministicMockMeetingCopilotProvider", () => {
     await expect(
       provider.generate({
         meetingId: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
+        context: "暂无可用会议上下文。",
         meetingTitle: "产品周会",
         prompt: "谁负责什么任务",
       }),

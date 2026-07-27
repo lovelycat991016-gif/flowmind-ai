@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   redirect: vi.fn(),
   revalidatePath: vi.fn(),
+  createProvider: vi.fn(),
+  buildContext: vi.fn(),
 }));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
@@ -11,6 +13,16 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock(
+  "@/features/ai-providers/factory/create-meeting-copilot-provider",
+  () => ({ createMeetingCopilotProvider: mocks.createProvider }),
+);
+vi.mock(
+  "@/features/meeting-copilot/context/build-meeting-copilot-context",
+  () => ({
+    buildMeetingCopilotContext: mocks.buildContext,
+  }),
+);
 
 import {
   INITIAL_MEETING_COPILOT_ACTION_STATE,
@@ -36,10 +48,11 @@ function meetingQuery(result: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.buildContext.mockResolvedValue("会议摘要\n确认发布范围");
 });
 
 describe("sendMeetingCopilotMessageAction", () => {
-  it("persists an owner prompt and deterministic assistant response", async () => {
+  it("persists an owner prompt and provider response with owner-scoped context", async () => {
     const meeting = meetingQuery({
       data: { id: meetingId, title: "产品周会", archived_at: null },
       error: null,
@@ -82,6 +95,9 @@ describe("sendMeetingCopilotMessageAction", () => {
       content: "模拟回答",
     });
     expect(mocks.revalidatePath).toHaveBeenCalledWith(`/meetings/${meetingId}`);
+    expect(mocks.buildContext).toHaveBeenCalledWith(
+      expect.objectContaining({ meetingId, userId: "owner" }),
+    );
   });
 
   it("rejects archived or inaccessible meetings without writing messages", async () => {
@@ -106,5 +122,39 @@ describe("sendMeetingCopilotMessageAction", () => {
       ),
     ).resolves.toMatchObject({ status: "error" });
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("keeps the owner prompt and returns a safe error when AI generation fails", async () => {
+    const meeting = meetingQuery({
+      data: { id: meetingId, title: "产品周会", archived_at: null },
+      error: null,
+    });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }),
+      },
+      from: vi
+        .fn()
+        .mockImplementation((table: string) =>
+          table === "meetings" ? meeting : { insert },
+        ),
+    });
+
+    await expect(
+      sendMeetingCopilotMessageAction(
+        INITIAL_MEETING_COPILOT_ACTION_STATE,
+        form("总结一下这次会议"),
+        { generate: vi.fn().mockRejectedValue(new Error("provider secret")) },
+      ),
+    ).resolves.toMatchObject({ status: "error" });
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledWith({
+      meeting_id: meetingId,
+      user_id: "owner",
+      role: "user",
+      content: "总结一下这次会议",
+    });
   });
 });

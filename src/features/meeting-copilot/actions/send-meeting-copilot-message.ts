@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { DeterministicMockMeetingCopilotProvider } from "@/features/meeting-copilot/providers/deterministic-mock-meeting-copilot-provider";
+import { createMeetingCopilotProvider } from "@/features/ai-providers/factory/create-meeting-copilot-provider";
+import { buildMeetingCopilotContext } from "@/features/meeting-copilot/context/build-meeting-copilot-context";
 import type { MeetingCopilotProvider } from "@/features/meeting-copilot/providers/meeting-copilot-provider";
 import { meetingCopilotPromptSchema } from "@/features/meeting-copilot/schemas/meeting-copilot-input";
 import { zhCN } from "@/shared/i18n/zh-CN";
@@ -24,7 +25,7 @@ export const INITIAL_MEETING_COPILOT_ACTION_STATE: MeetingCopilotActionState = {
 export async function sendMeetingCopilotMessageAction(
   _previous: MeetingCopilotActionState,
   formData: FormData,
-  provider: MeetingCopilotProvider = new DeterministicMockMeetingCopilotProvider(),
+  provider?: MeetingCopilotProvider,
 ): Promise<MeetingCopilotActionState> {
   const parsed = meetingCopilotPromptSchema.safeParse({
     meetingId: formData.get("meetingId"),
@@ -75,10 +76,17 @@ export async function sendMeetingCopilotMessageAction(
   }
 
   try {
-    const response = await provider.generate({
+    const context = await buildMeetingCopilotContext({
+      meetingId: meeting.id,
+      userId: user.id,
+    });
+    const response = await (
+      provider ?? createMeetingCopilotProvider()
+    ).generate({
       meetingId: meeting.id,
       meetingTitle: meeting.title,
       prompt: parsed.data.prompt,
+      context,
     });
     const { error: assistantMessageError } = await supabase
       .from("meeting_ai_messages")
