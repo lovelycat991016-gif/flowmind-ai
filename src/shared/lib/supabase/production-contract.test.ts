@@ -33,6 +33,7 @@ describe("Supabase production contract", () => {
       "202607270001_add_meeting_ai_messages.sql",
       "202607270002_add_action_items.sql",
       "202607280001_extend_ai_usage_events.sql",
+      "202607280002_create_meeting_knowledge_base.sql",
     ]);
   });
 
