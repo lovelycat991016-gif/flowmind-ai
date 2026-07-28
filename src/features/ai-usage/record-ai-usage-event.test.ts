@@ -53,4 +53,31 @@ describe("recordAiUsageEvent", () => {
       failure_code: "provider_timeout",
     });
   });
+
+  it("ignores untrusted prompt, transcript, key, and raw provider fields", async () => {
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    await recordAiUsageEvent(
+      { from: vi.fn().mockReturnValue({ insert }) } as never,
+      {
+        userId: "5b13f6b1-1456-4cc1-bbb4-f85b253f6d34",
+        meetingId: "8f641098-b6a2-4f8c-84ad-38820f430391",
+        operationType: "meeting_copilot_response",
+        provider: "deepseek",
+        modelIdentifier: "deepseek-chat",
+        outcome: "failed",
+        failureCode: "request_failed",
+        latencyMs: 500,
+        prompt: "private prompt",
+        transcript: "private transcript",
+        apiKey: "private-api-key",
+        rawProviderError: "provider secret",
+      } as never,
+    );
+
+    const row = JSON.stringify(insert.mock.calls[0][0]);
+    expect(row).not.toContain("private prompt");
+    expect(row).not.toContain("private transcript");
+    expect(row).not.toContain("private-api-key");
+    expect(row).not.toContain("provider secret");
+  });
 });
