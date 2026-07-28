@@ -34,13 +34,16 @@ describe("embedding provider environment", () => {
     ).toThrow("Embedding provider configuration is invalid.");
   });
 
-  it("keeps unknown and unimplemented providers in the no-network mock boundary", () => {
-    expect(
-      parseEmbeddingProviderEnv({ EMBEDDING_PROVIDER: "deepseek" }),
-    ).toEqual({ provider: "mock", fallbackReason: "unsupported_provider" });
-    expect(
-      parseEmbeddingProviderEnv({ EMBEDDING_PROVIDER: "unknown" }),
-    ).toEqual({ provider: "mock", fallbackReason: "unknown_provider" });
+  it("defaults to mock only when no embedding provider is configured", () => {
+    expect(parseEmbeddingProviderEnv({})).toEqual({ provider: "mock" });
+  });
+
+  it("rejects explicit DeepSeek and unknown embedding providers safely", () => {
+    for (const provider of ["deepseek", "unknown"]) {
+      expect(() =>
+        parseEmbeddingProviderEnv({ EMBEDDING_PROVIDER: provider }),
+      ).toThrow("Embedding provider configuration is invalid.");
+    }
   });
 
   it("does not expose an embedding key through public environment variables", () => {

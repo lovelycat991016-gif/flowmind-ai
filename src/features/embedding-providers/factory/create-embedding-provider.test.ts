@@ -9,6 +9,15 @@ afterEach(() => {
 });
 
 describe("createEmbeddingProvider", () => {
+  it("returns the deterministic mock provider by default for local development", () => {
+    delete process.env.EMBEDDING_PROVIDER;
+
+    expect(createEmbeddingProvider().metadata).toEqual({
+      provider: "mock",
+      model: null,
+    });
+  });
+
   it("returns the deterministic mock provider when selected", async () => {
     process.env.EMBEDDING_PROVIDER = "mock";
 
@@ -31,13 +40,15 @@ describe("createEmbeddingProvider", () => {
     });
   });
 
-  it("does not enable an unimplemented or unknown provider", () => {
+  it("rejects an explicit DeepSeek or unknown embedding provider", () => {
     for (const provider of ["deepseek", "unknown"]) {
       process.env.EMBEDDING_PROVIDER = provider;
       delete process.env.EMBEDDING_MODEL;
       delete process.env.EMBEDDING_API_KEY;
 
-      expect(createEmbeddingProvider().metadata.provider).toBe("mock");
+      expect(() => createEmbeddingProvider()).toThrow(
+        "Embedding provider configuration is invalid.",
+      );
     }
   });
 });

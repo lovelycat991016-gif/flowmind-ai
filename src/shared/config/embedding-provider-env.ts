@@ -10,10 +10,7 @@ export type EmbeddingProviderConfiguration =
       apiKey: string;
       model: string;
     }
-  | {
-      provider: "mock";
-      fallbackReason?: "unknown_provider" | "unsupported_provider";
-    };
+  | { provider: "mock" };
 
 function requireValue(value: string | undefined) {
   const parsed = z.string().trim().min(1).safeParse(value);
@@ -35,10 +32,7 @@ export function parseEmbeddingProviderEnv(
       apiKey: requireValue(input.EMBEDDING_API_KEY),
     };
   }
-  if (provider === "deepseek") {
-    return { provider: "mock", fallbackReason: "unsupported_provider" };
-  }
-  return { provider: "mock", fallbackReason: "unknown_provider" };
+  throw new Error("Embedding provider configuration is invalid.");
 }
 
 export function getEmbeddingProviderEnv() {

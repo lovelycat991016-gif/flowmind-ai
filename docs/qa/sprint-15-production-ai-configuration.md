@@ -2,8 +2,8 @@
 
 ## Purpose
 
-This runbook records the private-beta production configuration for FlowMind
-server-side Chat and embedding providers. Set these values only in the Vercel
+This runbook records the private-beta configuration for FlowMind server-side
+Chat and embedding providers. Set production secrets only in the Vercel
 Production environment. Record verification status and a redacted incident
 reference in release evidence; never record a key, prompt, transcript, audio
 content, raw provider response, or customer data in this document.
@@ -19,19 +19,29 @@ DEEPSEEK_API_KEY=<server-only-secret>
 DEEPSEEK_MODEL=deepseek-chat
 ```
 
-Configure the embedding provider independently. The selected model must return
+DeepSeek Chat supports production use with the configuration above.
+
+## Embedding configuration
+
+FlowMind currently does not configure a real production embedding provider.
+DeepSeek does not currently support embeddings through a verified production
+API contract compatible with this application. The default development and test
+configuration is the deterministic, no-network MockEmbeddingProvider:
+
+```text
+EMBEDDING_PROVIDER=mock
+```
+
+Mock embedding is only for development and test. It is not a semantic RAG
+solution, and production RAG requires a real embedding provider with a separately
+approved server-only `EMBEDDING_API_KEY` and `EMBEDDING_MODEL`, returning
 exactly 1536 finite values because `meeting_document_chunks.embedding` is
 `vector(1536)`.
 
-```text
-EMBEDDING_PROVIDER=openai
-EMBEDDING_API_KEY=<server-only-secret>
-EMBEDDING_MODEL=text-embedding-3-small
-```
-
-`AI_PROVIDER` and `EMBEDDING_PROVIDER` have independent lifecycles. A change
-to the embedding model or dimension needs a separately approved compatibility
-and re-index plan; it must not be changed as an unreviewed runtime fallback.
+`AI_PROVIDER` and `EMBEDDING_PROVIDER` have independent lifecycles. Do not set
+`EMBEDDING_PROVIDER=deepseek` until a verified DeepSeek embedding adapter and
+1536-dimension compatibility plan have been approved. A change to the embedding
+model or dimension needs a separately approved compatibility and re-index plan.
 
 ## Secret boundary
 
@@ -47,9 +57,9 @@ Configuration validation emits only these generic errors:
 
 The error text must not identify a missing key, include its value, or reveal a
 provider response. An unknown Chat provider selects the existing mock fallback
-with a safe diagnostic reason. An unknown or unsupported embedding provider
-selects the no-network mock fallback; `deepseek` embedding remains unsupported
-until its 1536-dimension API contract is separately verified.
+with a safe diagnostic reason. An explicitly configured unknown or unsupported
+embedding provider, including `deepseek`, must fail safely with the generic
+embedding configuration error. It must not silently select MockEmbeddingProvider.
 
 ## Usage Event and logging boundary
 
@@ -66,16 +76,19 @@ event.
 
 ## Pre-release checklist
 
-1. Confirm all six variables are configured only in Vercel Production settings.
+1. Confirm the three DeepSeek Chat variables are configured only in Vercel
+   Production settings.
 2. Confirm no `NEXT_PUBLIC_DEEPSEEK_API_KEY` or
    `NEXT_PUBLIC_EMBEDDING_API_KEY` variable exists in Vercel or source control.
-3. Confirm Chat uses DeepSeek and embedding uses the approved OpenAI-compatible
-   model with 1536 output dimensions using a synthetic test meeting.
-4. Simulate a missing key, HTTP failure, and timeout in automated tests. Verify
+3. Confirm Chat uses DeepSeek. Confirm `EMBEDDING_PROVIDER=mock` is used only
+   for development and test, and do not claim production semantic RAG is enabled.
+4. Before enabling production RAG, approve and configure a real 1536-dimension
+   embedding provider with server-only `EMBEDDING_API_KEY` and `EMBEDDING_MODEL`.
+5. Simulate a missing key, HTTP failure, and timeout in automated tests. Verify
    that UI/job state receives only a safe failure code or message.
-5. Inspect a synthetic success and failure Usage Event. Verify sensitive input,
+6. Inspect a synthetic success and failure Usage Event. Verify sensitive input,
    raw provider data, and keys are absent.
-6. Verify `AI_PROVIDER=mock` and `EMBEDDING_PROVIDER=mock` restore the
+7. Verify `AI_PROVIDER=mock` and `EMBEDDING_PROVIDER=mock` restore the
    non-network local/test fallback before emergency rollback is needed.
 
 ## Rollback
