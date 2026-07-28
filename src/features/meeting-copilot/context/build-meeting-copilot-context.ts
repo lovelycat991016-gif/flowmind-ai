@@ -1,5 +1,6 @@
 import { meetingIntelligenceResultSchema } from "@/features/meeting-intelligence/schemas/meeting-intelligence-input";
 import { createClient } from "@/shared/lib/supabase/server";
+import { retrieveMeetingContext } from "@/features/meeting-knowledge/queries/retrieve-meeting-context";
 
 const MAX_TRANSCRIPT_CONTEXT_LENGTH = 12_000;
 
@@ -54,6 +55,7 @@ export function formatMeetingCopilotContext(data: MeetingCopilotContextData) {
 export async function buildMeetingCopilotContext(input: {
   meetingId: string;
   userId: string;
+  question?: string;
 }) {
   const supabase = await createClient();
   const [recordingResult, intelligenceResult, actionItemResult] =
@@ -105,7 +107,7 @@ export async function buildMeetingCopilotContext(input: {
   const intelligence = meetingIntelligenceResultSchema.safeParse(
     (intelligenceResult.data as { result: unknown } | null)?.result,
   );
-  return formatMeetingCopilotContext({
+  const currentContext = formatMeetingCopilotContext({
     transcript,
     summary: intelligence.success ? intelligence.data.summary.content : null,
     decisions: intelligence.success
@@ -114,4 +116,14 @@ export async function buildMeetingCopilotContext(input: {
     actionItems: (actionItemResult.data ?? []) as CopilotActionItem[],
     risks: intelligence.success ? intelligence.data.risks : [],
   });
+  if (!input.question) return currentContext;
+  let chunks: Awaited<ReturnType<typeof retrieveMeetingContext>> = [];
+  try {
+    chunks = await retrieveMeetingContext({ question: input.question });
+  } catch {
+    return currentContext;
+  }
+  return chunks.length
+    ? `${currentContext}\n\n历史会议来源\n${chunks.map((chunk) => `- [${chunk.meetingId}] ${chunk.content}`).join("\n")}`
+    : currentContext;
 }

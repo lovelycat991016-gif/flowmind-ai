@@ -81,6 +81,7 @@ export async function sendMeetingCopilotMessageAction(
     const context = await buildMeetingCopilotContext({
       meetingId: meeting.id,
       userId: user.id,
+      question: parsed.data.prompt,
     });
     const response = await (
       provider ?? createMeetingCopilotProvider()

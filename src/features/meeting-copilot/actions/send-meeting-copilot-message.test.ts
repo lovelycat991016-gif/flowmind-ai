@@ -96,7 +96,14 @@ describe("sendMeetingCopilotMessageAction", () => {
     });
     expect(mocks.revalidatePath).toHaveBeenCalledWith(`/meetings/${meetingId}`);
     expect(mocks.buildContext).toHaveBeenCalledWith(
-      expect.objectContaining({ meetingId, userId: "owner" }),
+      expect.objectContaining({
+        meetingId,
+        userId: "owner",
+        question: "总结一下这次会议",
+      }),
+    );
+    expect(provider.generate).toHaveBeenCalledWith(
+      expect.objectContaining({ context: "会议摘要\n确认发布范围" }),
     );
   });
 
