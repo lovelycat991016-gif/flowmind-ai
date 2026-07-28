@@ -8,11 +8,13 @@ import type {
 import { AIProviderError } from "@/features/ai-providers/model/ai-provider";
 
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
+const DEEPSEEK_REQUEST_TIMEOUT_MS = 30_000;
 
 export type DeepSeekTransportRequest = {
   url: string;
   headers: { Authorization: string; "Content-Type": string };
   body: string;
+  signal: AbortSignal;
 };
 
 export type DeepSeekTransport = (
@@ -68,6 +70,7 @@ export class DeepSeekProvider implements AIProvider {
           method: "POST",
           headers: request.headers,
           body: request.body,
+          signal: request.signal,
         }));
   }
 
@@ -88,6 +91,11 @@ export class DeepSeekProvider implements AIProvider {
     input: StructuredOutputRequest | TextResponseRequest,
     structured: boolean,
   ) {
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      DEEPSEEK_REQUEST_TIMEOUT_MS,
+    );
     let response: Response;
     try {
       response = await this.transport({
@@ -97,9 +105,12 @@ export class DeepSeekProvider implements AIProvider {
           "Content-Type": "application/json",
         },
         body: requestBody(input, this.options.model, structured),
+        signal: controller.signal,
       });
     } catch (error) {
       throw new AIProviderError(mapTransportFailure(error));
+    } finally {
+      clearTimeout(timeout);
     }
     if (!response.ok)
       throw new AIProviderError(mapHttpFailure(response.status));

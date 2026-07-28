@@ -22,6 +22,12 @@ describe("AI provider environment", () => {
     expect(() => parseAIProviderEnv({ AI_PROVIDER: "deepseek" })).toThrow(
       "AI provider configuration is invalid.",
     );
+    expect(() =>
+      parseAIProviderEnv({
+        AI_PROVIDER: "deepseek",
+        DEEPSEEK_API_KEY: "   ",
+      }),
+    ).toThrow("AI provider configuration is invalid.");
   });
 
   it("falls back to Mock for an unknown provider without retaining its value", () => {
