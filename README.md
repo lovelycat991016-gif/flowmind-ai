@@ -1,240 +1,123 @@
 # FlowMind AI
 
-FlowMind AI is a production-focused meeting assistant that will turn uploaded meeting audio into transcripts, summaries, and actionable follow-ups. Development is delivered in review-gated Sprints.
+> 让会议从记录工具变成可持续利用的知识资产。
 
-## Sprint 1
+FlowMind AI 是一个面向团队协作的 AI 会议工作台。它把录音、转录、会议智能分析、行动项和可追溯的 Copilot 问答连接为一条受权限保护的工作流，帮助团队将讨论转化为后续行动和可复用知识。
 
-Sprint 1 establishes the application foundation and authentication boundary:
+## 产品定位
 
-- Next.js 15 App Router with React and strict TypeScript
-- Tailwind CSS and shadcn/ui-compatible primitives
-- Supabase email/password authentication
-- Sign-up, sign-in, sign-out, and password recovery
-- Cookie-based server sessions and protected dashboard routing
-- Automatic profile provisioning with owner-only row-level security
-- Vitest, Testing Library, ESLint, Prettier, and GitHub Actions
+FlowMind AI 不是单纯的会议记录工具，而是面向会议后协作的知识与行动系统：
 
-Meeting management and dashboard product functionality are intentionally outside Sprint 1.
+- 将会议讨论整理为摘要、关键决策、行动项与风险。
+- 让成员在后续会议中继续检索历史上下文，而不是重新翻找文档。
+- 为 Copilot 回答提供当前请求级来源引用，帮助使用者判断答案依据。
 
-## Sprint 2
+## 用户痛点与 AI 方案
 
-Sprint 2 adds the approved Calm Workspace dashboard experience:
+| 困难                 | FlowMind AI 的应对方式                                                          |
+| -------------------- | ------------------------------------------------------------------------------- |
+| 录音和长文本难以回顾 | 服务端转录将录音变为带时间片段的会议文本。                                      |
+| 结论、责任和风险分散 | Meeting Intelligence 生成摘要、决策、行动项和风险，并通过 Zod 校验结构化结果。  |
+| 历史会议难以复用     | 知识库把转录切分为 chunks，向量检索为 Copilot 提供相关历史上下文。              |
+| AI 回答缺少依据      | 当前 Copilot 请求返回临时来源引用；没有知识库时明确回退到当前会议上下文。       |
+| AI 调用难以运营      | `ai_usage_events` 支持按 provider、模型、操作、成功率和延迟进行只读可靠性分析。 |
 
-- Responsive application shell with desktop sidebar, tablet icon rail, and mobile drawer
-- Header with reserved search and notifications plus an accessible user menu
-- Welcome banner, four statistics, recent meetings, quick actions, and processing empty state
-- Typed, deterministic local mock data with no Supabase or API reads
-- Reusable Card, Button, Badge, Skeleton, EmptyPlaceholder, and loading-state components
-- Light and dark semantic design tokens for surfaces, status colors, shadows, and focus states
-- Browser-validated desktop, tablet, and mobile layouts
+## 核心能力
 
-Meeting CRUD, uploads, transcription, summaries, action item persistence, and all backend integration remain outside Sprint 2.
+1. **会议与录音管理**：创建会议，上传私有 MP3、WAV、MP4 或 WebM 录音。
+2. **自动转录与会议智能**：通过异步 worker 处理转录和结构化分析，状态可追踪、失败可安全重试。
+3. **行动项中心**：从 AI 分析结果创建、跟踪并完成行动项。
+4. **Meeting Copilot**：围绕当前会议提问；在可用时结合历史知识库上下文回答。
+5. **知识库与 RAG**：转录切分、1536 维 embedding 持久化、pgvector 检索、owner-scoped 来源引用。
+6. **可靠性与质量评估**：AI 调用可靠性分析、合成中文 RAG 评估集与可重复 Demo fixture。
 
-## Sprint 3
-
-Sprint 3 delivers the owner-isolated Meeting Management MVP:
-
-- PostgreSQL `meetings` migration with title constraints, `updated_at` trigger, indexes, and authenticated RLS policies
-- Server Component reads for meeting list, detail, and live dashboard data
-- Server Actions for create, rename, archive, restore, and permanent delete
-- URL-driven title search, active/archived filtering, four sort modes, and 20-row pagination using a 21-row query
-- Responsive create, list, detail, loading, error, empty, and non-disclosing not-found states
-- Dashboard metrics for total, active, archived, and this-week meetings, plus latest active meetings
-
-No API routes, audio upload, transcription, AI processing, action items, team workspaces, or future dependent tables are introduced.
-
-## Sprint 4
-
-Sprint 4 adds the audio upload foundation without processing audio:
-
-- PostgreSQL `recordings` metadata with owner-only RLS and one active recording per meeting
-- Private Supabase Storage `recordings` bucket restricted to each user's object-path prefix
-- Client-side, Server Action, and bucket-level 500 MB file-size enforcement
-- Supported MIME types: MP3, MP4, WAV, and WebM audio
-- Authenticated Server Actions create upload intents, use Supabase Storage SDK-managed short-lived signed upload URLs, finalize verified uploads, and cancel upload attempts
-- Browser uploads bytes directly to Storage, with progress, cancellation, retry, and accessible Chinese status feedback
-- Meeting detail recording states for empty, uploading, uploaded, failed, cancelled, and archived meetings
-
-The recording lifecycle is `pending` to `uploading`, then `uploaded`, `failed`, or `cancelled`. Failed and cancelled attempts remain operational history; retry creates a new upload intent rather than reusing a prior row.
-
-Transcription, AI summaries, action extraction, and all background processing remain deferred.
-
-## Sprint 5
-
-Sprint 5 adds the processing-job foundation:
-
-- Owner-isolated `processing_jobs` with queued, running, completed, failed, and cancelled states
-- Idempotent queued-job creation after recording upload finalization
-- Owner-scoped processing-status reads and meeting-detail status display
-
-## Sprint 6
-
-Sprint 6 delivers the bounded transcription pipeline:
-
-- Owner-isolated `transcripts` and ordered `transcript_segments`
-- Service-role worker claim lease plus protected completion and failure RPCs
-- Private Storage audio read and an isolated `whisper-1` provider adapter
-- Safe provider failure-code handling without raw database, audio, or provider details
-- Read-only transcript content and timestamped segments in meeting detail
-
-No summaries, action items, AI chat, FFmpeg, or audio chunking are introduced.
-
-## Sprint 7
-
-Sprint 7 adds the meeting-intelligence foundation:
-
-- Owner-isolated `meeting_intelligence` records with queued, running, completed, failed, and cancelled lifecycle states
-- Lease-protected service-role worker claiming and owner/lease-safe result or failure persistence
-- Provider-neutral structured-output boundary that validates summaries, action items, and decisions before storage
-- Owner-scoped Server Component reads that hide inaccessible or malformed intelligence results
-- Read-only meeting-detail states for completed, processing, unavailable, empty, and archived intelligence
-
-The MVP intentionally uses an injected provider transport in automated tests. A live LLM transport, production provider credentials, retry controls, editing, exports, AI chat, and knowledge search are not part of Sprint 7.
-
-## Sprint 8
-
-Sprint 8 prepares the MVP for private beta without expanding the product surface:
-
-- Production environment validation, Supabase RLS and private Storage verification checklists, and service-role/Cron boundary runbooks
-- Redacted server-side operational logging with correlation IDs and safe failure classifications
-- An owner-linked, append-only AI usage ledger for meeting-intelligence attempts; it is not a billing, quota, or customer analytics feature
-- Chinese first-use dashboard guidance for creating a meeting, uploading audio, waiting for processing, and reviewing results
-- Private-beta release, support, rollback, and incident documentation
-
-Live beta verification is recorded in `docs/qa/sprint-8-production-hardening-qa.md`. It must be completed in the target Vercel and Supabase environment before invitations are broadened.
-
-## Technology
-
-- Next.js 15 and React 19
-- TypeScript in strict mode
-- Tailwind CSS
-- Supabase Auth and PostgreSQL
-- Vitest and Testing Library
-- Vercel deployment target
-
-## Project Structure
+## 技术架构
 
 ```text
-src/
-|-- app/                         # App Router pages, layouts, loading states, and middleware entry
-|-- entities/meeting/            # Meeting types and status presentation
-|-- entities/recording/          # Recording types and presentation helpers
-|-- features/
-|   |-- auth/                    # Authentication actions, policies, schemas, and UI
-|   |-- dashboard/               # Query-driven dashboard composition
-|   |-- meetings/                # Server actions, queries, schemas, and meeting UI
-|   |-- recordings/              # Recording actions, queries, schemas, and upload UI
-|   |-- transcription/           # Transcript queries, provider adapter, worker contracts, and UI
-|   `-- meeting-intelligence/    # Intelligence schemas, queries, provider, worker, and read-only UI
-|-- shared/
-|   |-- config/                  # Validated public environment configuration
-|   |-- lib/supabase/            # Browser, server, and middleware Supabase adapters
-|   `-- ui/                      # Reusable shadcn-style UI primitives
-`-- widgets/
-    |-- app-shell/               # Responsive sidebar, header, drawer, and navigation model
-    |-- dashboard/               # Query-driven dashboard widgets
-    `-- meetings/                # Meeting list and detail compositions
-supabase/
-`-- migrations/                 # PostgreSQL schema and RLS migrations
-docs/
-|-- qa/                          # Browser QA evidence and issue log
-|-- screenshots/                 # Sprint review screenshots
-`-- superpowers/                 # Approved design specifications and implementation plans
-.github/workflows/               # Continuous integration
+Meeting audio
+  -> Transcription worker
+  -> Transcript + segments
+  -> Meeting Intelligence worker -> summary / decisions / action items / risks
+  -> Knowledge worker -> chunks -> embeddings -> pgvector retrieval
+  -> Meeting Copilot -> current context + retrieved chunks -> answer + temporary sources
+
+AI calls -> ai_usage_events -> reliability analytics
 ```
 
-## Local Setup
+**关键边界**
 
-### Prerequisites
+- Next.js 15 App Router、React 19、TypeScript、Tailwind CSS。
+- Supabase Auth、PostgreSQL、Storage 与 owner-scoped RLS 是数据访问的最终边界。
+- Service-role 仅用于受控 worker 与 Demo fixture 持久化；浏览器不获取 service-role 或 Provider API Key。
+- AI Provider 与 Embedding Provider 分离。DeepSeek Chat 可在服务端启用；当前 `EMBEDDING_PROVIDER=mock` 仅用于本地/Preview Demo，不代表生产语义 RAG。
+- RAG RPC 强制 `auth.uid()` owner 过滤，不返回 embedding；来源引用仅存在于本次 Copilot 响应，不持久化到消息历史。
 
-- Node.js 20.9 or newer
-- npm 10 or newer
-- A Supabase project
+更多产品与技术决策见 [项目案例文档](docs/portfolio/flowmind-ai-case-study.md)。
 
-### Installation
+## Demo 使用流程
 
-1. Install dependencies:
+Landing Page 提供一个静态叙事式导览：产品价值 -> AI Workflow -> Demo 会议 -> Copilot -> 来源引用。完整可运行 Demo 使用专用合成用户和 fixture：
 
-   ```bash
-   npm ci
-   ```
+```bash
+npm run demo:fixtures:seed
+npm run demo:fixtures:verify
+```
 
-2. Create `.env.local` from `.env.example` and provide the public values from Supabase project settings:
+1. 在本地或 Preview 环境以专用 Demo 用户登录。
+2. 打开“产品规划会议”查看摘要、决策、行动项和风险。
+3. 向 Copilot 提问历史风险，查看当前响应附带的来源会议、日期与片段。
+4. 在没有索引或检索失败的状态下，确认 UI 显示“知识库不可用”，并仅基于当前会议上下文回答。
+5. 验证其他用户无法读取 Demo 用户的会议、转录、知识 chunks 或来源。
 
-   ```text
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-   ```
+`seed` 是幂等的；需要重置 Demo 数据时使用 `npm run demo:fixtures:reset`。fixture runner 受 `DEMO_FIXTURES_ENABLED` 和非生产环境保护，不能用于生产数据。
 
-3. Apply all migrations in filename order through the Supabase CLI or SQL editor, including profiles, meetings, recordings, processing jobs, transcription, worker leases, transcription execution, meeting intelligence, and AI usage events.
+## 本地运行
 
-4. In Supabase Auth URL configuration, set the site URL to `http://localhost:3000` and allow `http://localhost:3000/auth/callback` as a redirect URL.
+### 前置条件
 
-5. Start the application:
+- Node.js 20.9+
+- npm 10+
+- 本地或 Preview Supabase 项目
 
-   ```bash
-   npm run dev
-   ```
+### 配置
 
-Open `http://localhost:3000`.
+```bash
+npm ci
+Copy-Item .env.example .env.local
+npm run dev
+```
 
-For local dashboard visual QA without a live Supabase session, add `DASHBOARD_PREVIEW=true` to `.env.local`. The bypass is restricted to development mode and `/dashboard`; production builds retain the authenticated boundary.
+`.env.example` 仅包含浏览器安全的 Supabase 公共配置与非敏感 Provider 选择器。API Key 必须仅在服务器环境变量或 Vercel Project Settings 中配置，且禁止使用 `NEXT_PUBLIC_` 前缀。
 
-## Commands
+常用配置：
 
-| Command                | Purpose                               |
-| ---------------------- | ------------------------------------- |
-| `npm run dev`          | Start the local development server    |
-| `npm run build`        | Create a production build             |
-| `npm run start`        | Run the production server             |
-| `npm run format:check` | Check Prettier formatting             |
-| `npm run lint`         | Run ESLint with zero warnings allowed |
-| `npm run typecheck`    | Run strict TypeScript checks          |
-| `npm test`             | Run the complete test suite           |
+```text
+AI_PROVIDER=deepseek
+DEEPSEEK_MODEL=deepseek-chat
+EMBEDDING_PROVIDER=mock
+```
 
-## Authentication Architecture
+生产配置、Embedding 边界和 Preview Demo 要求见 [生产 AI 配置说明](docs/qa/sprint-15-production-ai-configuration.md) 与 [Demo QA Runbook](docs/qa/sprint-16-demo-qa.md)。
 
-Authentication sessions are stored in secure Supabase-managed cookies. Middleware refreshes sessions and applies route policy, while protected server pages repeat the user check as defense in depth. Browser code receives only the public anonymous key; service-role credentials are not used by the web application.
+## 验证命令
 
-The `profiles` table references `auth.users` one-to-one. A database trigger provisions each profile, and RLS restricts authenticated users to selecting and updating their own profile.
+| Command                        | Purpose                                      |
+| ------------------------------ | -------------------------------------------- |
+| `npm test`                     | 运行完整 Vitest 测试集                       |
+| `npm run lint`                 | ESLint 零 warning 检查                       |
+| `npm run typecheck`            | 严格 TypeScript 检查                         |
+| `npm run build`                | Next.js 生产构建                             |
+| `npm run demo:fixtures:seed`   | 幂等初始化 Demo fixture                      |
+| `npm run demo:fixtures:reset`  | 仅清理 Demo 用户 fixture                     |
+| `npm run demo:fixtures:verify` | 验证 fixture、RAG 预期来源与 owner isolation |
 
-## Meeting Architecture
+## 作品集材料
 
-`src/app/dashboard/layout.tsx` and `src/app/meetings/layout.tsx` use the authenticated application shell. Meeting reads live in `features/meetings/queries` and run from Server Components; mutations live in `features/meetings/actions` as Server Actions. `features/meetings/schemas` owns Zod input validation and URL list-state normalization.
+- [产品与技术案例](docs/portfolio/flowmind-ai-case-study.md)
+- [2-3 分钟 Demo 演示脚本](docs/portfolio/flowmind-ai-demo-script.md)
+- [AI Reliability Analytics](docs/qa/sprint-17-ai-reliability-analysis.md)
+- [RAG Quality Analysis](docs/qa/sprint-17-rag-quality-analysis.md)
 
-The `meetings` table is the dashboard source of truth. Database constraints and RLS enforce the final ownership boundary; inaccessible detail rows return the same not-found route as missing rows. The browser never performs direct Supabase CRUD.
+## 当前边界
 
-Future recordings, transcripts, summaries, action items, and storage objects must reference a meeting only after a deletion policy is chosen. Before shipping those dependencies, decide whether permanent meeting deletion cascades, is restricted, or runs a cleanup workflow. Sprint 3 only cascades from `auth.users` to `meetings` and deliberately creates none of those dependent artifacts.
-
-## Audio Upload Architecture
-
-Recording reads use `features/recordings/queries` with the authenticated Supabase server client and existing meeting RLS relationship. Upload mutations remain in `features/recordings/actions`: the server validates metadata and ownership, creates the recording intent, and requests a signed upload URL from the Supabase Storage SDK. The browser receives no service-role credential and uploads bytes directly to the private bucket using that URL.
-
-The `recordings` table and `storage.objects` policies provide the final ownership boundary. A user's Storage path is `{user_id}/{meeting_id}/{recording_id}.{extension}`; public object URLs are not used. Signed upload URL expiration is SDK-managed and cannot be overridden by the application.
-
-Failed or cancelled attempts may leave abandoned private Storage objects. Automated cleanup is intentionally deferred; production operations must periodically review this risk until a separately approved retention/cleanup workflow is implemented.
-
-## Dashboard Screenshots
-
-- Desktop: `docs/screenshots/sprint-2/dashboard-desktop.png`
-- Tablet: `docs/screenshots/sprint-2/dashboard-tablet.png`
-- Mobile: `docs/screenshots/sprint-2/dashboard-mobile.png`
-
-Detailed responsive and accessibility results are recorded in `docs/qa/sprint-2-dashboard-qa.md`.
-
-Sprint 3 validation notes, including the pending browser screenshot limitation, are recorded in `docs/qa/sprint-3-meeting-management-qa.md`.
-
-Sprint 4 upload validation and operational-risk notes are recorded in `docs/qa/sprint-4-audio-upload-qa.md`.
-
-Sprint 6 transcription worker and meeting-detail validation notes are recorded in `docs/qa/sprint-6-transcription-worker-qa.md`.
-
-Sprint 7 meeting-intelligence release verification and known limitations are recorded in `docs/qa/sprint-7-meeting-intelligence-qa.md`.
-
-Sprint 8 private-beta production verification, release evidence fields, and operational limitations are recorded in `docs/qa/sprint-8-production-hardening-qa.md`.
-
-## Verification
-
-The CI workflow runs formatting, linting, type checking, tests, and a production build on every pull request and every push to `main`.
-
-Live authentication requires a configured Supabase project and cannot be exercised using the placeholder CI environment values.
+项目保留认证、RLS、worker lifecycle、Provider abstraction 与 RAG retrieval contract 的稳定边界。真实生产语义 RAG 需要配置经批准的、兼容 `vector(1536)` 的 embedding provider；Mock embedding 不能作为生产 RAG 能力宣传。
