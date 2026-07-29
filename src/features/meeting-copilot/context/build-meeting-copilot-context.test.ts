@@ -16,6 +16,7 @@ vi.mock(
 import {
   buildMeetingCopilotContext,
   formatMeetingCopilotContext,
+  retrieveMeetingCopilotSources,
 } from "./build-meeting-copilot-context";
 
 function query(result: unknown) {
@@ -24,6 +25,7 @@ function query(result: unknown) {
     eq: vi.fn(),
     status: vi.fn(),
     order: vi.fn(),
+    in: vi.fn(),
     maybeSingle: vi.fn(),
     then: (onfulfilled: (value: unknown) => unknown) =>
       Promise.resolve(result).then(onfulfilled),
@@ -32,6 +34,7 @@ function query(result: unknown) {
   builder.eq.mockReturnValue(builder);
   builder.status.mockReturnValue(builder);
   builder.order.mockReturnValue(builder);
+  builder.in.mockReturnValue(builder);
   builder.maybeSingle.mockResolvedValue(result);
   return builder;
 }
@@ -140,5 +143,81 @@ describe("buildMeetingCopilotContext", () => {
 
     expect(context).toContain("当前会议转录内容");
     expect(context).not.toContain("历史会议来源");
+  });
+});
+
+describe("retrieveMeetingCopilotSources", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps retrieved chunks to temporary owner-scoped meeting sources", async () => {
+    const meetings = query({
+      data: [
+        {
+          id: "historical-meeting",
+          title: "风险讨论会议",
+          meeting_date: "2026-07-28",
+        },
+      ],
+      error: null,
+    });
+    mocks.createClient.mockResolvedValue({
+      from: vi.fn((table: string) => {
+        if (table === "meetings") return meetings;
+        throw new Error(`Unexpected table: ${table}`);
+      }),
+    });
+    mocks.retrieveMeetingContext.mockResolvedValue([
+      {
+        content: "上线依赖尚未完成验收。",
+        metadata: { speaker: "王敏", timestamp: "00:12:00" },
+        meetingId: "historical-meeting",
+        similarity: 0.9,
+      },
+    ]);
+
+    await expect(
+      retrieveMeetingCopilotSources({ question: "之前有哪些风险？", userId: "owner" }),
+    ).resolves.toEqual([
+      {
+        meetingId: "historical-meeting",
+        title: "风险讨论会议",
+        meetingDate: "2026-07-28",
+        content: "上线依赖尚未完成验收。",
+        metadata: { speaker: "王敏", timestamp: "00:12:00" },
+      },
+    ]);
+    expect(meetings.eq).toHaveBeenCalledWith("user_id", "owner");
+    expect(meetings.in).toHaveBeenCalledWith("id", ["historical-meeting"]);
+  });
+
+  it("does not fabricate a source when owner-scoped meeting metadata is missing", async () => {
+    const meetings = query({ data: [], error: null });
+    mocks.createClient.mockResolvedValue({ from: vi.fn(() => meetings) });
+    mocks.retrieveMeetingContext.mockResolvedValue([
+      { content: "其他用户内容", metadata: {}, meetingId: "other-meeting", similarity: 0.9 },
+    ]);
+
+    await expect(
+      retrieveMeetingCopilotSources({ question: "风险", userId: "owner" }),
+    ).resolves.toEqual([]);
+  });
+
+  it("falls back to no sources when retrieval or owner-scoped lookup fails", async () => {
+    mocks.retrieveMeetingContext.mockRejectedValueOnce(new Error("retrieval failure"));
+    await expect(
+      retrieveMeetingCopilotSources({ question: "风险", userId: "owner" }),
+    ).resolves.toEqual([]);
+
+    mocks.retrieveMeetingContext.mockResolvedValueOnce([
+      { content: "风险", metadata: {}, meetingId: "historical-meeting", similarity: 0.9 },
+    ]);
+    mocks.createClient.mockResolvedValueOnce({
+      from: vi.fn(() => query({ data: null, error: new Error("lookup failure") })),
+    });
+    await expect(
+      retrieveMeetingCopilotSources({ question: "风险", userId: "owner" }),
+    ).resolves.toEqual([]);
   });
 });

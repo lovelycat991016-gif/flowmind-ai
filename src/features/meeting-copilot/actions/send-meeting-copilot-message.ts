@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createMeetingCopilotProvider } from "@/features/ai-providers/factory/create-meeting-copilot-provider";
-import { buildMeetingCopilotContext } from "@/features/meeting-copilot/context/build-meeting-copilot-context";
+import { buildMeetingCopilotContext, retrieveMeetingCopilotSources, type MeetingCopilotSource } from "@/features/meeting-copilot/context/build-meeting-copilot-context";
 import { recordServerAiUsageEvent } from "@/features/ai-usage/record-ai-usage-event";
 import type { MeetingCopilotProvider } from "@/features/meeting-copilot/providers/meeting-copilot-provider";
 import { meetingCopilotPromptSchema } from "@/features/meeting-copilot/schemas/meeting-copilot-input";
@@ -15,6 +15,7 @@ export type MeetingCopilotActionState = {
   status: "idle" | "error" | "success";
   message: string;
   value: string;
+  sources?: MeetingCopilotSource[];
 };
 
 export const INITIAL_MEETING_COPILOT_ACTION_STATE: MeetingCopilotActionState = {
@@ -77,12 +78,14 @@ export async function sendMeetingCopilotMessageAction(
   }
 
   const startedAt = Date.now();
+  let sources: MeetingCopilotSource[] = [];
   try {
     const context = await buildMeetingCopilotContext({
       meetingId: meeting.id,
       userId: user.id,
       question: parsed.data.prompt,
     });
+    sources = await retrieveMeetingCopilotSources({ question: parsed.data.prompt, userId: user.id });
     const response = await (
       provider ?? createMeetingCopilotProvider()
     ).generate({
@@ -129,5 +132,5 @@ export async function sendMeetingCopilotMessageAction(
   }
 
   revalidatePath(`/meetings/${meeting.id}`);
-  return { status: "success", message: zhCN.copilot.sent, value: "" };
+  return { status: "success", message: zhCN.copilot.sent, value: "", sources };
 }

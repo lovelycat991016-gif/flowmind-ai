@@ -61,6 +61,10 @@ export function MeetingCopilotSection({
           )}
         </div>
 
+        {state.status === "success" ? (
+          state.sources?.length ? <section aria-label="知识库来源" className="space-y-2 text-sm"><p className="font-medium">知识库来源</p>{state.sources.map((source) => <article className="rounded-md border p-3" key={`${source.meetingId}:${source.content}`}><p>{source.title}</p><p className="text-muted-foreground text-xs">{new Date(source.meetingDate).toLocaleDateString("zh-CN")}</p><p className="mt-1">{source.content}</p></article>)}</section> : <p className="text-muted-foreground text-sm" role="status">知识库当前不可用，已基于本次会议上下文回答。</p>
+        ) : null}
+
         {!archived ? (
           <form action={action} className="space-y-3">
             <input name="meetingId" type="hidden" value={meetingId} />

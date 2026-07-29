@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   createProvider: vi.fn(),
   buildContext: vi.fn(),
+  retrieveSources: vi.fn(),
 }));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
@@ -21,6 +22,7 @@ vi.mock(
   "@/features/meeting-copilot/context/build-meeting-copilot-context",
   () => ({
     buildMeetingCopilotContext: mocks.buildContext,
+    retrieveMeetingCopilotSources: mocks.retrieveSources,
   }),
 );
 
@@ -49,6 +51,7 @@ function meetingQuery(result: unknown) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.buildContext.mockResolvedValue("会议摘要\n确认发布范围");
+  mocks.retrieveSources.mockResolvedValue([]);
 });
 
 describe("sendMeetingCopilotMessageAction", () => {
@@ -105,6 +108,40 @@ describe("sendMeetingCopilotMessageAction", () => {
     expect(provider.generate).toHaveBeenCalledWith(
       expect.objectContaining({ context: "会议摘要\n确认发布范围" }),
     );
+  });
+
+  it("returns temporary knowledge sources with only the current successful response", async () => {
+    const meeting = meetingQuery({
+      data: { id: meetingId, title: "产品周会", archived_at: null },
+      error: null,
+    });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({
+      auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner" } } }) },
+      from: vi.fn((table: string) => (table === "meetings" ? meeting : { insert })),
+    });
+    mocks.retrieveSources.mockResolvedValue([
+      {
+        meetingId: "historical-meeting",
+        title: "风险讨论会议",
+        meetingDate: "2026-07-28",
+        content: "上线依赖尚未完成验收。",
+        metadata: {},
+      },
+    ]);
+
+    await expect(
+      sendMeetingCopilotMessageAction(
+        INITIAL_MEETING_COPILOT_ACTION_STATE,
+        form("总结风险"),
+        { generate: vi.fn().mockResolvedValue({ content: "请关注验收依赖。", provider: "mock" }) },
+      ),
+    ).resolves.toMatchObject({
+      status: "success",
+      sources: [{ meetingId: "historical-meeting", title: "风险讨论会议" }],
+    });
+    expect(mocks.retrieveSources).toHaveBeenCalledWith({ question: "总结风险", userId: "owner" });
+    expect(insert).toHaveBeenNthCalledWith(2, expect.not.objectContaining({ sources: expect.anything() }));
   });
 
   it("rejects archived or inaccessible meetings without writing messages", async () => {

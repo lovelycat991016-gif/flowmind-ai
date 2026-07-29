@@ -66,4 +66,54 @@ describe("MeetingCopilotSection", () => {
     );
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
+
+  it("shows citations only for sources returned by the current successful request", () => {
+    render(
+      <MeetingCopilotSection
+        initialState={{
+          status: "success",
+          message: "已发送",
+          value: "",
+          sources: [
+            {
+              meetingId: "historical-meeting",
+              title: "风险讨论会议",
+              meetingDate: "2026-07-28",
+              content: "上线依赖尚未完成验收。",
+              metadata: { timestamp: "00:12:00" },
+            },
+          ],
+        }}
+        meetingId="6b79f5f3-f083-4a75-b74b-41342f2b1454"
+        messages={[message]}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: "知识库来源" })).toHaveTextContent("风险讨论会议");
+    expect(screen.getByText("上线依赖尚未完成验收。")).toBeVisible();
+    expect(screen.queryByText("知识库当前不可用，已基于本次会议上下文回答。")).not.toBeInTheDocument();
+  });
+
+  it("shows the unavailable fallback without rendering fabricated citations", () => {
+    const { rerender } = render(
+      <MeetingCopilotSection
+        initialState={{ status: "success", message: "已发送", value: "", sources: [] }}
+        meetingId="6b79f5f3-f083-4a75-b74b-41342f2b1454"
+        messages={[]}
+      />,
+    );
+
+    expect(
+      screen.getByText("知识库当前不可用，已基于本次会议上下文回答。"),
+    ).toBeVisible();
+    expect(screen.queryByRole("region", { name: "知识库来源" })).not.toBeInTheDocument();
+
+    rerender(
+      <MeetingCopilotSection
+        meetingId="6b79f5f3-f083-4a75-b74b-41342f2b1454"
+        messages={[message]}
+      />,
+    );
+    expect(screen.queryByRole("region", { name: "知识库来源" })).not.toBeInTheDocument();
+  });
 });

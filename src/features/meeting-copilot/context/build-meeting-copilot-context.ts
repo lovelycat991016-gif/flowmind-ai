@@ -17,6 +17,44 @@ export type MeetingCopilotContextData = {
   actionItems: CopilotActionItem[];
   risks: string[];
 };
+export type MeetingCopilotSource = {
+  meetingId: string;
+  title: string;
+  meetingDate: string;
+  content: string;
+  metadata: Record<string, unknown>;
+};
+
+export async function retrieveMeetingCopilotSources(input: {
+  question: string;
+  userId: string;
+}): Promise<MeetingCopilotSource[]> {
+  try {
+    const chunks = await retrieveMeetingContext({ question: input.question });
+    if (!chunks.length) return [];
+    const supabase = await createClient();
+    const ids = [...new Set(chunks.map((chunk) => chunk.meetingId))];
+    const { data, error } = await supabase
+      .from("meetings")
+      .select("id,title,meeting_date")
+      .eq("user_id", input.userId)
+      .in("id", ids);
+    if (error) return [];
+    const meetings = new Map(
+      ((data ?? []) as Array<{ id: string; title: string; meeting_date: string }>).map(
+        (meeting) => [meeting.id, meeting],
+      ),
+    );
+    return chunks.flatMap((chunk) => {
+      const meeting = meetings.get(chunk.meetingId);
+      return meeting
+        ? [{ meetingId: meeting.id, title: meeting.title, meetingDate: meeting.meeting_date, content: chunk.content, metadata: chunk.metadata }]
+        : [];
+    });
+  } catch {
+    return [];
+  }
+}
 
 const statusLabels: Record<CopilotActionItem["status"], string> = {
   open: "待处理",
