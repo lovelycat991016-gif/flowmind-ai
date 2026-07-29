@@ -5,14 +5,16 @@ import type {
 
 type QueryResult = { data: unknown; error: unknown };
 type FixtureQuery = PromiseLike<QueryResult> & {
-  delete(): FixtureQuery;
   eq(key: string, value: string): FixtureQuery;
   in(key: string, values: string[]): FixtureQuery;
+};
+type FixtureTable = {
+  delete(): FixtureQuery;
   select(columns?: string): FixtureQuery;
   upsert(rows: unknown[]): FixtureQuery;
 };
-type FixtureClient = {
-  from(table: string): FixtureQuery;
+export type FixtureClient = {
+  from(table: string): FixtureTable;
   auth: {
     admin: {
       createUser(input: { email: string; email_confirm: boolean; user_metadata: { full_name: string } }): Promise<QueryResult>;

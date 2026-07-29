@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --configLoader runner",
     "test:watch": "vitest --configLoader runner",
+    "demo:fixtures:seed": "vite-node --config vitest.config.ts scripts/demo-fixtures/run-demo-fixtures.ts seed",
+    "demo:fixtures:reset": "vite-node --config vitest.config.ts scripts/demo-fixtures/run-demo-fixtures.ts reset",
+    "demo:fixtures:verify": "vite-node --config vitest.config.ts scripts/demo-fixtures/run-demo-fixtures.ts verify",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
