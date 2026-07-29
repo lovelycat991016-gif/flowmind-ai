@@ -8,13 +8,16 @@ describe("LandingPage", () => {
     render(<LandingPage />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "让每场会议都有结果" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "让会议从记录工具变成可持续利用的知识资产。",
+      }),
     ).toBeVisible();
     expect(screen.getByText("AI 会议助手")).toBeVisible();
     expect(screen.getByText("自动转录")).toBeVisible();
     expect(screen.getByText("AI 摘要")).toBeVisible();
     expect(screen.getByText("行动项管理")).toBeVisible();
-    expect(screen.getByText("会议 Copilot")).toBeVisible();
+    expect(screen.getAllByText("会议 Copilot").length).toBeGreaterThan(0);
 
     screen
       .getAllByRole("link", { name: "免费开始使用" })

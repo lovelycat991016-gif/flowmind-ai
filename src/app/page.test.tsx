@@ -24,7 +24,7 @@ describe("HomePage", () => {
     render(await HomePage());
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "让每场会议都有结果",
+      "让会议从记录工具变成可持续利用的知识资产。",
     );
     expect(mocks.redirect).not.toHaveBeenCalled();
   });

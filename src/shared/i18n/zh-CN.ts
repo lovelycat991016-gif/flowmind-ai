@@ -17,9 +17,9 @@ export const zhCN = {
   },
   landing: {
     eyebrow: "FlowMind AI 会议工作台",
-    heroTitle: "让每场会议都有结果",
+    heroTitle: "让会议从记录工具变成可持续利用的知识资产。",
     heroDescription:
-      "从私密录音到转录、摘要、决策与行动项，FlowMind 将会议讨论沉淀为团队可执行的下一步。",
+      "FlowMind AI 将每次讨论沉淀为可追溯的结论、行动与知识，让团队在下一场会议之前就能继续推进。",
     start: "免费开始使用",
     signIn: "登录",
     capabilitiesTitle: "不止记录，更让会议推动工作",
@@ -64,6 +64,92 @@ export const zhCN = {
     ],
     ctaTitle: "把下一场会议变成下一步行动",
     ctaDescription: "创建你的 FlowMind 工作台，开始沉淀重要会议成果。",
+    viewDemo: "查看 Demo",
+    valueTitle: "把会议留下的，不止是一份记录",
+    valueDescription:
+      "会议中的共识、风险和责任不再停留在散落的文档里，而是成为团队可以持续复用的工作资产。",
+    value: [
+      {
+        title: "沉淀团队知识",
+        description: "让关键讨论在会议结束后仍可被理解、检索和引用。",
+      },
+      {
+        title: "推进明确行动",
+        description: "从决策中提取待办与负责人，让共识自然进入执行。",
+      },
+      {
+        title: "让答案可追溯",
+        description: "Copilot 基于当前会议与历史来源回答，保留判断依据。",
+      },
+    ],
+    demo: {
+      eyebrow: "产品 Demo",
+      title: "一场会议，如何成为下一步工作的起点",
+      description:
+        "用合成会议案例查看 FlowMind 如何完成分析、提问与来源追溯。",
+      navigationLabel: "Demo 导览",
+      navigation: [
+        { title: "会议智能分析", href: "#demo-intelligence" },
+        { title: "向 Copilot 提问", href: "#demo-copilot" },
+        { title: "查看来源引用", href: "#demo-sources" },
+      ],
+      meetingTitle: "产品规划会议",
+      meetingDate: "2026 年 7 月 28 日",
+      intelligence: {
+        title: "会议智能分析",
+        summary: "团队确认先完成登录体验优化，再进入新用户引导的开发与验收。",
+        decisions: ["本周冻结发布范围", "登录体验作为首要改进项"],
+        actionItems: ["产品负责人整理验收标准", "工程团队完成登录链路压测"],
+        risk: "供应商交付节奏可能影响发布时间。",
+      },
+      copilot: {
+        title: "会议 Copilot",
+        question: "之前会议讨论过哪些上线风险？",
+        answer:
+          "主要风险包括供应商交付延期、登录接口高峰期表现，以及第三方服务限流。",
+      },
+      sourcesLabel: "来源引用",
+      sources: [
+        {
+          title: "风险讨论会议",
+          date: "2026 年 7 月 22 日",
+          excerpt: "第三方身份服务需要准备备用方案，并提前完成预算审批。",
+        },
+        {
+          title: "技术评审会议",
+          date: "2026 年 7 月 24 日",
+          excerpt: "登录接口需要在高峰流量下完成压测后再决定上线窗口。",
+        },
+        {
+          title: "项目周会",
+          date: "2026 年 7 月 25 日",
+          excerpt: "供应商交付预计延后，需要同步调整发布计划。",
+        },
+      ],
+      fallback: {
+        title: "知识库不可用",
+        description: "Copilot 将仅基于当前会议上下文回答。",
+      },
+    },
+    architecture: {
+      eyebrow: "产品架构",
+      title: "让 AI 能力清晰、可靠地服务每次会议",
+      description: "从会议理解到知识沉淀，再到可观察的运行质量，每一层都保持清晰的产品边界。",
+      layers: [
+        {
+          title: "AI Workflow",
+          description: "将会议内容整理为摘要、决策、行动项和风险提示。",
+        },
+        {
+          title: "Knowledge Pipeline",
+          description: "把已完成的会议内容沉淀为可检索的历史知识。",
+        },
+        {
+          title: "Reliability Layer",
+          description: "持续观察调用结果与响应表现，让体验保持可信。",
+        },
+      ],
+    },
   },
   navigation: {
     dashboard: "工作台",
