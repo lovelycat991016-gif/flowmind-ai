@@ -88,9 +88,30 @@ export type RagEvaluationResult = {
   status: "pass" | "failed" | "fallback";
   context: string;
   retrievedMeetingIds: string[];
+  retrievedChunks: { meetingId: string; similarity: number }[];
   missingMeetingIds: string[];
   unsupportedMeetingIds: string[];
   providerFailure: boolean;
+  retrievalCorrectness: "correct" | "incorrect" | "empty";
+  thresholdFilteredCount: number;
+};
+
+export type RagQualityMetrics = {
+  evaluationCount: number;
+  hitRate: number;
+  emptyRetrievalRate: number;
+  similarityDistribution: {
+    sampleCount: number;
+    min: number | null;
+    max: number | null;
+    average: number | null;
+    buckets: {
+      below050: number;
+      from050To079: number;
+      from080To089: number;
+      atLeast090: number;
+    };
+  };
 };
 
 function appendSources(currentContext: string, chunks: SyntheticRagChunk[]) {
@@ -104,8 +125,15 @@ function evaluateChunks(
   evaluationCase: SyntheticRagEvaluationCase,
   currentContext: string,
   chunks: SyntheticRagChunk[],
+  similarityThreshold: number,
 ): RagEvaluationResult {
-  const retrievedMeetingIds = [...new Set(chunks.map((chunk) => chunk.meetingId))];
+  const qualifyingChunks = chunks.filter(
+    (chunk) => chunk.similarity >= similarityThreshold,
+  );
+  const thresholdFilteredCount = chunks.length - qualifyingChunks.length;
+  const retrievedMeetingIds = [
+    ...new Set(qualifyingChunks.map((chunk) => chunk.meetingId)),
+  ];
   const expectedMeetingIds = new Set(evaluationCase.expectedMeetingIds);
   const missingMeetingIds = evaluationCase.expectedMeetingIds.filter(
     (meetingId) => !retrievedMeetingIds.includes(meetingId),
@@ -114,44 +142,114 @@ function evaluateChunks(
     (meetingId) => !expectedMeetingIds.has(meetingId),
   );
 
-  if (!chunks.length) {
+  if (!qualifyingChunks.length) {
     return {
       status: "fallback",
       context: currentContext,
       retrievedMeetingIds,
+      retrievedChunks: [],
       missingMeetingIds,
       unsupportedMeetingIds,
       providerFailure: false,
+      retrievalCorrectness: "empty",
+      thresholdFilteredCount,
     };
   }
 
+  const retrievalCorrectness =
+    missingMeetingIds.length || unsupportedMeetingIds.length
+      ? "incorrect"
+      : "correct";
   return {
-    status:
-      missingMeetingIds.length || unsupportedMeetingIds.length ? "failed" : "pass",
-    context: appendSources(currentContext, chunks),
+    status: retrievalCorrectness === "correct" ? "pass" : "failed",
+    context: appendSources(currentContext, qualifyingChunks),
     retrievedMeetingIds,
+    retrievedChunks: qualifyingChunks.map(({ meetingId, similarity }) => ({
+      meetingId,
+      similarity,
+    })),
     missingMeetingIds,
     unsupportedMeetingIds,
     providerFailure: false,
+    retrievalCorrectness,
+    thresholdFilteredCount,
   };
 }
 
 export async function runSyntheticRagEvaluation(input: {
   evaluationCase: SyntheticRagEvaluationCase;
   currentContext: string;
+  similarityThreshold?: number;
   retrieve(question: string): Promise<SyntheticRagChunk[]>;
 }): Promise<RagEvaluationResult> {
   try {
     const chunks = await input.retrieve(input.evaluationCase.question);
-    return evaluateChunks(input.evaluationCase, input.currentContext, chunks);
+    return evaluateChunks(
+      input.evaluationCase,
+      input.currentContext,
+      chunks,
+      input.similarityThreshold ?? 0,
+    );
   } catch {
     return {
       status: "fallback",
       context: input.currentContext,
       retrievedMeetingIds: [],
+      retrievedChunks: [],
       missingMeetingIds: [...input.evaluationCase.expectedMeetingIds],
       unsupportedMeetingIds: [],
       providerFailure: true,
+      retrievalCorrectness: "empty",
+      thresholdFilteredCount: 0,
     };
   }
+}
+
+export function summarizeRagQuality(
+  results: RagEvaluationResult[],
+): RagQualityMetrics {
+  const similarities = results.flatMap((result) =>
+    result.retrievedChunks.map((chunk) => chunk.similarity),
+  );
+  const buckets = {
+    below050: 0,
+    from050To079: 0,
+    from080To089: 0,
+    atLeast090: 0,
+  };
+  for (const similarity of similarities) {
+    if (similarity < 0.5) buckets.below050 += 1;
+    else if (similarity < 0.8) buckets.from050To079 += 1;
+    else if (similarity < 0.9) buckets.from080To089 += 1;
+    else buckets.atLeast090 += 1;
+  }
+
+  return {
+    evaluationCount: results.length,
+    hitRate:
+      results.length === 0
+        ? 0
+        : results.filter((result) => result.retrievalCorrectness === "correct")
+            .length / results.length,
+    emptyRetrievalRate:
+      results.length === 0
+        ? 0
+        : results.filter((result) => result.retrievalCorrectness === "empty")
+            .length / results.length,
+    similarityDistribution: {
+      sampleCount: similarities.length,
+      min: similarities.length === 0 ? null : Math.min(...similarities),
+      max: similarities.length === 0 ? null : Math.max(...similarities),
+      average:
+        similarities.length === 0
+          ? null
+          : Number(
+              (
+                similarities.reduce((total, similarity) => total + similarity, 0) /
+                similarities.length
+              ).toFixed(4),
+            ),
+      buckets,
+    },
+  };
 }
