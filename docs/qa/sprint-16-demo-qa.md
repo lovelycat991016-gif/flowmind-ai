@@ -89,6 +89,22 @@ Sources exist only in the current Server Action response. Refreshing or
 reopening the meeting displays persisted role/content messages without prior
 sources.
 
+## Runtime Acceptance Record
+
+**Status:** Passed
+**Validated:** 2026-07-29
+
+- [x] Clean non-production environment setup completed with the Supabase stack running.
+- [x] Demo fixture lifecycle passed: demo seed, verify, reset, and seed recovery.
+- [x] Meeting Intelligence Demo produced the expected fixture analysis.
+- [x] Copilot RAG sources displayed only the returned, owner-scoped citations.
+- [x] Knowledge unavailable fallback retained current-meeting context without sources.
+- [x] Owner isolation prevented access to another user's Demo data (owner isolation verified).
+
+This record contains acceptance outcomes only. It intentionally excludes
+environment URLs, user identifiers, credentials, meeting content, prompts, and
+provider payloads.
+
 ## QA Checklist
 
 - [ ] Preview uses a dedicated non-production Supabase project and Demo user.

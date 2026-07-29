@@ -36,4 +36,20 @@ describe("Sprint 16 Preview demo runbook contract", () => {
     expect(packageJson.scripts["demo:fixtures:reset"]).toContain("--config vitest.config.ts");
     expect(packageJson.scripts["demo:fixtures:verify"]).toContain("--config vitest.config.ts");
   });
+
+  it("records the completed runtime acceptance evidence", () => {
+    const document = readFileSync(runbookPath, "utf8");
+
+    expect(document).toContain("## Runtime Acceptance Record");
+    expect(document).toContain("Supabase stack running");
+    expect(document).toContain("demo seed");
+    expect(document).toContain("verify");
+    expect(document).toContain("reset");
+    expect(document).toContain("seed recovery");
+    expect(document).toContain("Meeting Intelligence Demo");
+    expect(document).toContain("Copilot RAG sources");
+    expect(document).toContain("Knowledge unavailable fallback");
+    expect(document).toContain("owner isolation");
+    expect(document).toContain("Passed");
+  });
 });
