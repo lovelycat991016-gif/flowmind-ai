@@ -21,11 +21,11 @@ Legend:
 | Production build             | Verified                       | `npm run build` completed successfully on 2026-07-30.                                 |
 | Public environment contract  | Verified                       | `.env.example` exposes only public Supabase values and non-sensitive selectors.       |
 | Service-role boundary        | Verified                       | Worker configuration reads `CRON_SECRET` and `SUPABASE_SERVICE_ROLE_KEY` server-side. |
-| Vercel Cron configuration    | Partial                        | Two protected Cron routes are configured every five minutes.                          |
+| Vercel Cron configuration    | Verified in repository         | Three protected Cron routes are configured every five minutes.                        |
 | Supabase migration history   | Operator verification required | Compare all local versions below with the target project before deployment.           |
 | DeepSeek Chat                | Operator verification required | Configure production secret and perform a redacted successful/failure check.          |
 | Production semantic RAG      | Release blocker                | Mock embedding is not a production semantic embedding solution.                       |
-| Knowledge indexing execution | Release blocker                | The knowledge worker exists, but no Vercel Cron route/schedule invokes it.            |
+| Knowledge indexing execution | Verified in repository         | The protected knowledge worker route is scheduled every five minutes.                 |
 
 ## 1. Environment Variable Checklist
 
@@ -129,8 +129,9 @@ to the target project in this exact order:
 
 **Verified from repository**:
 
-- `vercel.json` defines `/api/cron/transcription` and
-  `/api/cron/meeting-intelligence` with `*/5 * * * *` schedules.
+- `vercel.json` defines `/api/cron/transcription`,
+  `/api/cron/meeting-intelligence`, and `/api/cron/meeting-knowledge` with
+  `*/5 * * * *` schedules.
 - Both routes appear in the fresh production build.
 - Next.js disables the `X-Powered-By` header, enables Strict Mode, and builds
   typed routes.
@@ -175,14 +176,14 @@ and used to re-index Production data under a separate approved plan.
 
 ## 6. Deployment Risks And Required Decisions
 
-| Risk                                               | Impact                                                                                                                                    | Required action                                                                                                         |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Knowledge worker lacks a deployed invocation route | Completed transcripts create knowledge jobs that will not be processed automatically; new Production chunks/embeddings can remain queued. | Add and review an invocation strategy in a separate task before enabling production knowledge indexing or semantic RAG. |
-| Mock embedding in Production                       | Retrieval output is deterministic demo behavior, not semantic relevance.                                                                  | Keep it restricted to local/Preview demos; block production RAG claims.                                                 |
-| Vercel schedule availability is unverified         | Configured five-minute Cron may not run on the selected plan.                                                                             | Verify plan capability and first scheduled executions.                                                                  |
-| Remote migration history is unverified             | Schema/RLS/RPC state may differ from the repository.                                                                                      | Compare and apply migrations using the operator procedure.                                                              |
-| Provider credentials are not auditable from source | Chat/transcription jobs can fail at runtime despite a successful build.                                                                   | Configure server-only secrets and run redacted success/failure smoke checks.                                            |
-| One job processed per Cron invocation              | Queue backlog can grow under sustained volume.                                                                                            | Monitor queued/lease-expired jobs and establish an operational throughput target before scaling access.                 |
+| Risk                                                 | Impact                                                                                                             | Required action                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Knowledge worker runtime configuration is unverified | The route is scheduled, but missing embedding or service-role configuration can still leave jobs failed or queued. | Configure server-only secrets/selectors and smoke-test authorized completed, idle, and failed job states. |
+| Mock embedding in Production                         | Retrieval output is deterministic demo behavior, not semantic relevance.                                           | Keep it restricted to local/Preview demos; block production RAG claims.                                   |
+| Vercel schedule availability is unverified           | Configured five-minute Cron may not run on the selected plan.                                                      | Verify plan capability and first scheduled executions.                                                    |
+| Remote migration history is unverified               | Schema/RLS/RPC state may differ from the repository.                                                               | Compare and apply migrations using the operator procedure.                                                |
+| Provider credentials are not auditable from source   | Chat/transcription jobs can fail at runtime despite a successful build.                                            | Configure server-only secrets and run redacted success/failure smoke checks.                              |
+| One job processed per Cron invocation                | Queue backlog can grow under sustained volume.                                                                     | Monitor queued/lease-expired jobs and establish an operational throughput target before scaling access.   |
 
 ## Production Go/No-Go Gate
 
@@ -194,11 +195,11 @@ Do not promote the release until every item below is true:
 - [ ] Remote migration history matches the ordered list and deployment is
       confirmed.
 - [ ] Auth redirect URLs and public application URL match the Production origin.
-- [ ] Cron authorization and the two configured worker routes are smoke-tested.
+- [ ] Cron authorization and all three configured worker routes are smoke-tested.
 - [ ] Owner isolation is validated against the Production project using
       non-sensitive test data.
-- [ ] The knowledge worker invocation risk is resolved or knowledge indexing and
-      semantic RAG are explicitly disabled for Production.
+- [ ] The knowledge worker route is authorized and smoke-tested for completed,
+      idle, and safe failure responses.
 - [ ] Production RAG is not claimed while `EMBEDDING_PROVIDER=mock` remains in
       use.
 

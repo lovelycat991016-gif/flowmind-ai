@@ -4,7 +4,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const envExamplePath = path.resolve(".env.example");
-const checklistPath = path.resolve("docs/qa/sprint-17-production-deployment.md");
+const checklistPath = path.resolve(
+  "docs/qa/sprint-17-production-deployment.md",
+);
+const vercelConfigPath = path.resolve("vercel.json");
 
 describe("production deployment contract", () => {
   it("keeps the committed environment example public and non-sensitive", () => {
@@ -35,5 +38,16 @@ describe("production deployment contract", () => {
     expect(checklist).toContain("supabase db push");
     expect(checklist).toContain("Vercel Cron");
     expect(checklist).toContain("Rollback");
+  });
+
+  it("schedules the protected knowledge worker alongside existing workers", () => {
+    const vercelConfig = JSON.parse(readFileSync(vercelConfigPath, "utf8")) as {
+      crons: { path: string; schedule: string }[];
+    };
+
+    expect(vercelConfig.crons).toContainEqual({
+      path: "/api/cron/meeting-knowledge",
+      schedule: "*/5 * * * *",
+    });
   });
 });

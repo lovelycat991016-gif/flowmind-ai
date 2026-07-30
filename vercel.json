@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/transcription",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/meeting-knowledge",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
