@@ -2,15 +2,15 @@
   "crons": [
     {
       "path": "/api/cron/meeting-intelligence",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 3 * * *"
     },
     {
       "path": "/api/cron/transcription",
-      "schedule": "*/5 * * * *"
+      "schedule": "15 3 * * *"
     },
     {
       "path": "/api/cron/meeting-knowledge",
-      "schedule": "*/5 * * * *"
+      "schedule": "30 3 * * *"
     }
   ]
 }
