@@ -21,4 +21,9 @@ describe("Chinese localization", () => {
     expect(zhCN.auth).toHaveProperty("loginDescription");
     expect(zhCN.auth).toHaveProperty("accountConfirmationSent");
   });
+
+  it("does not expose a generic coming-soon state for intelligence and action-item surfaces", () => {
+    expect(zhCN.dashboard).not.toHaveProperty("comingSoon");
+    expect(zhCN.navigation).not.toHaveProperty("comingSoon");
+  });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { cancelUpload } from "@/features/recordings/actions/cancel-upload";
 import { createUploadIntent } from "@/features/recordings/actions/create-upload-intent";
@@ -46,6 +47,7 @@ function uploadToSignedUrl(
 }
 
 export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [phase, setPhase] = useState<UploadPhase>("idle");
@@ -111,6 +113,7 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
 
     setProgress(100);
     setPhase("completed");
+    router.refresh();
   };
 
   const onFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {

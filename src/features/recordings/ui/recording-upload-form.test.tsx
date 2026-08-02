@@ -12,6 +12,7 @@ const actions = vi.hoisted(() => ({
   createUploadIntent: vi.fn(),
   finalizeUpload: vi.fn(),
 }));
+const navigation = vi.hoisted(() => ({ refresh: vi.fn() }));
 
 vi.mock("@/features/recordings/actions/cancel-upload", () => ({
   cancelUpload: actions.cancelUpload,
@@ -21,6 +22,9 @@ vi.mock("@/features/recordings/actions/create-upload-intent", () => ({
 }));
 vi.mock("@/features/recordings/actions/finalize-upload", () => ({
   finalizeUpload: actions.finalizeUpload,
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: navigation.refresh }),
 }));
 
 import { RecordingUploadForm } from "./recording-upload-form";
@@ -152,6 +156,7 @@ describe("RecordingUploadForm", () => {
     await waitFor(() =>
       expect(actions.finalizeUpload).toHaveBeenCalledWith({ recordingId }),
     );
+    expect(navigation.refresh).toHaveBeenCalledOnce();
     expect(
       await screen.findByText("录音上传完成。", { selector: "p" }),
     ).toBeVisible();

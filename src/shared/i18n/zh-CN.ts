@@ -85,8 +85,7 @@ export const zhCN = {
     demo: {
       eyebrow: "产品 Demo",
       title: "一场会议，如何成为下一步工作的起点",
-      description:
-        "用合成会议案例查看 FlowMind 如何完成分析、提问与来源追溯。",
+      description: "用合成会议案例查看 FlowMind 如何完成分析、提问与来源追溯。",
       navigationLabel: "Demo 导览",
       navigation: [
         { title: "会议智能分析", href: "#demo-intelligence" },
@@ -134,7 +133,8 @@ export const zhCN = {
     architecture: {
       eyebrow: "产品架构",
       title: "让 AI 能力清晰、可靠地服务每次会议",
-      description: "从会议理解到知识沉淀，再到可观察的运行质量，每一层都保持清晰的产品边界。",
+      description:
+        "从会议理解到知识沉淀，再到可观察的运行质量，每一层都保持清晰的产品边界。",
       layers: [
         {
           title: "AI Workflow",
@@ -163,7 +163,6 @@ export const zhCN = {
     signedInAs: "当前登录账号",
     notifications: "通知",
     notificationsUnavailable: "通知功能暂未开放",
-    comingSoon: "即将推出",
   },
   dashboard: {
     greeting: "早上好，{name}",
@@ -315,6 +314,7 @@ export const zhCN = {
   processingJobs: {
     title: "AI 处理状态",
     queued: "等待AI处理",
+    queuedDescription: "录音已上传，正在等待处理任务启动。",
     running: "正在处理中",
     completed: "处理完成",
     failed: "处理失败",

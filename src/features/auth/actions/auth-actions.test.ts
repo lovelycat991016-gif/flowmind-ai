@@ -5,11 +5,15 @@ const mocks = vi.hoisted(() => ({ createClient: vi.fn(), redirect: vi.fn() }));
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: mocks.createClient,
 }));
+vi.mock("@/shared/config/env", () => ({
+  getPublicEnv: () => ({ appUrl: "https://flowmind.example" }),
+}));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 import {
   requestSignupEmailVerificationAction,
   resendSignupEmailVerificationAction,
+  signOutAction,
   verifySignupEmailOtpAction,
 } from "./auth-actions";
 import { zhCN } from "@/shared/i18n/zh-CN";
@@ -48,6 +52,10 @@ describe("signup email OTP actions", () => {
     expect(signUp).toHaveBeenCalledWith({
       email: "user@example.com",
       password: "secure-passphrase",
+      options: {
+        emailRedirectTo:
+          "https://flowmind.example/auth/callback?next=/dashboard",
+      },
     });
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/signup/verify?email=user%40example.com&next=%2Fdashboard",
@@ -174,5 +182,20 @@ describe("signup email OTP actions", () => {
         }),
       ),
     ).resolves.toEqual({ status: "error", message: zhCN.auth.authFailed });
+  });
+});
+
+describe("sign out action", () => {
+  it("ends the server session before returning to login", async () => {
+    const signOut = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({ auth: { signOut } });
+    mocks.redirect.mockImplementation(() => {
+      throw new Error("NEXT_REDIRECT");
+    });
+
+    await expect(signOutAction()).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(signOut).toHaveBeenCalledOnce();
+    expect(mocks.redirect).toHaveBeenCalledWith("/login");
   });
 });

@@ -35,9 +35,13 @@ export async function requestSignupEmailVerificationAction(
   }
 
   const supabase = await createClient();
+  const { appUrl } = getPublicEnv();
   const { data, error } = await supabase.auth.signUp({
     email: result.data.email,
     password: result.data.password,
+    options: {
+      emailRedirectTo: `${appUrl}/auth/callback?next=/dashboard`,
+    },
   });
 
   if (error) {

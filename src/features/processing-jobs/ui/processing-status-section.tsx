@@ -24,6 +24,11 @@ export function ProcessingStatusSection({
         </h3>
         <ProcessingStatusBadge status={processingJob.status} />
       </div>
+      {processingJob.status === "queued" ? (
+        <p aria-live="polite" className="text-muted-foreground mt-2 text-sm">
+          {zhCN.processingJobs.queuedDescription}
+        </p>
+      ) : null}
     </section>
   );
 }

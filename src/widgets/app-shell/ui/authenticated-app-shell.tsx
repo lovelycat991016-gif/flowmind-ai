@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { SignOutButton } from "@/features/auth/ui/sign-out-button";
@@ -20,8 +19,9 @@ export async function AuthenticatedAppShell({
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) redirect("/login");
-    userEmail = user.email ?? "FlowMind user";
+    // Middleware owns route admission. A just-issued session cookie can be
+    // visible there before this Server Component observes it.
+    userEmail = user?.email ?? "FlowMind user";
   }
 
   return (

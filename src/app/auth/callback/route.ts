@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     request.nextUrl.searchParams.get("next"),
   );
 
-  if (code && destination === "/reset-password") {
+  if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 

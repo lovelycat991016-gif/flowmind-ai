@@ -47,18 +47,6 @@ export function AppSidebar({ mobile = false, onNavigate }: AppSidebarProps) {
                 >
                   {item.label}
                 </span>
-                {item.reserved ? (
-                  <span
-                    aria-hidden="true"
-                    className={
-                      mobile
-                        ? "text-sidebar-muted text-[11px]"
-                        : "text-sidebar-muted hidden text-[11px] xl:inline"
-                    }
-                  >
-                    {zhCN.navigation.comingSoon}
-                  </span>
-                ) : null}
               </>
             );
             const className = [

@@ -25,7 +25,12 @@ describe("auth callback", () => {
     );
   });
 
-  it("does not exchange a callback code into a magic-link login session", async () => {
+  it("exchanges a verified signup callback code before redirecting to the dashboard", async () => {
+    const exchangeCodeForSession = vi.fn().mockResolvedValue({ error: null });
+    mocks.createClient.mockResolvedValue({
+      auth: { exchangeCodeForSession },
+    });
+
     const response = await GET({
       nextUrl: new URL(
         "http://localhost/auth/callback?code=code&next=/dashboard",
@@ -33,9 +38,7 @@ describe("auth callback", () => {
       url: "http://localhost/auth/callback?code=code&next=/dashboard",
     } as never);
 
-    expect(mocks.createClient).not.toHaveBeenCalled();
-    expect(response.headers.get("location")).toBe(
-      "http://localhost/login?error=callback",
-    );
+    expect(exchangeCodeForSession).toHaveBeenCalledWith("code");
+    expect(response.headers.get("location")).toBe("http://localhost/dashboard");
   });
 });

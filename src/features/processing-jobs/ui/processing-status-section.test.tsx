@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { zhCN } from "@/shared/i18n/zh-CN";
 import { ProcessingStatusSection } from "./processing-status-section";
 
 const recording = {
@@ -43,6 +44,19 @@ describe("ProcessingStatusSection", () => {
     expect(screen.getByRole("heading", { name: "AI 处理状态" })).toBeVisible();
     expect(
       screen.getByRole("status", { name: "AI 处理状态：等待AI处理" }),
+    ).toBeVisible();
+  });
+
+  it("renders the queued status explanation", () => {
+    render(
+      <ProcessingStatusSection
+        processingJob={processingJob}
+        recording={recording}
+      />,
+    );
+
+    expect(
+      screen.getByText(zhCN.processingJobs.queuedDescription),
     ).toBeVisible();
   });
 
