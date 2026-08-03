@@ -40,14 +40,24 @@ describe("production deployment contract", () => {
     expect(checklist).toContain("Rollback");
   });
 
-  it("schedules the protected knowledge worker alongside existing workers", () => {
+  it("schedules all protected workers with Hobby-compatible daily cron times", () => {
     const vercelConfig = JSON.parse(readFileSync(vercelConfigPath, "utf8")) as {
       crons: { path: string; schedule: string }[];
     };
 
-    expect(vercelConfig.crons).toContainEqual({
-      path: "/api/cron/meeting-knowledge",
-      schedule: "*/5 * * * *",
-    });
+    expect(vercelConfig.crons).toEqual([
+      {
+        path: "/api/cron/meeting-intelligence",
+        schedule: "0 3 * * *",
+      },
+      {
+        path: "/api/cron/transcription",
+        schedule: "15 3 * * *",
+      },
+      {
+        path: "/api/cron/meeting-knowledge",
+        schedule: "30 3 * * *",
+      },
+    ]);
   });
 });

@@ -70,6 +70,19 @@ class UploadRequest {
   }
 }
 
+class UploadAbortController {
+  static latest: UploadAbortController | null = null;
+  private readonly eventTarget = new EventTarget();
+  signal = this.eventTarget as AbortSignal;
+  abort = vi.fn(() => {
+    this.eventTarget.dispatchEvent(new Event("abort"));
+  });
+
+  constructor() {
+    UploadAbortController.latest = this;
+  }
+}
+
 function audioFile(type = "audio/webm", size = 4) {
   return new File([new Uint8Array(size)], " weekly-review.webm ", { type });
 }
@@ -88,7 +101,9 @@ function successfulIntent() {
 beforeEach(() => {
   vi.clearAllMocks();
   UploadRequest.latest = null;
+  UploadAbortController.latest = null;
   vi.stubGlobal("XMLHttpRequest", UploadRequest);
+  vi.stubGlobal("AbortController", UploadAbortController);
   actions.finalizeUpload.mockResolvedValue({
     status: "success",
     data: { recordingId },
@@ -171,6 +186,9 @@ describe("RecordingUploadForm", () => {
     await waitFor(() => expect(UploadRequest.latest).not.toBeNull());
     act(() => UploadRequest.latest?.fail());
 
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "上传失败，请重试。",
+    );
     expect(
       await screen.findByRole("button", { name: "重试上传" }),
     ).toBeEnabled();
@@ -189,11 +207,13 @@ describe("RecordingUploadForm", () => {
     await waitFor(() => expect(UploadRequest.latest).not.toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "取消上传" }));
 
+    expect(UploadAbortController.latest?.abort).toHaveBeenCalledOnce();
     await waitFor(() =>
       expect(actions.cancelUpload).toHaveBeenCalledWith({ recordingId }),
     );
     expect(
       await screen.findByText("录音上传已取消。", { selector: "p" }),
     ).toBeVisible();
+    expect(screen.getByLabelText("选择录音文件")).toBeEnabled();
   });
 });

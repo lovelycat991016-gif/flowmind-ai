@@ -16,17 +16,27 @@ import { Input } from "@/shared/ui/input";
 import { Label } from "@/shared/ui/label";
 import { zhCN } from "@/shared/i18n/zh-CN";
 
-type UploadPhase = "idle" | "uploading" | "failed" | "completed" | "cancelled";
+type UploadPhase = "idle" | "uploading" | "success" | "error" | "cancelled";
 
 function uploadToSignedUrl(
   signedUrl: string,
   file: File,
   onProgress: (percentage: number) => void,
   requestRef: React.MutableRefObject<XMLHttpRequest | null>,
+  signal: AbortSignal,
 ) {
   return new Promise<void>((resolve, reject) => {
     const request = new XMLHttpRequest();
     requestRef.current = request;
+
+    const cleanUp = () => signal.removeEventListener("abort", abortRequest);
+    const abortRequest = () => request.abort();
+
+    if (signal.aborted) {
+      reject(new Error("Upload cancelled"));
+      return;
+    }
+
     request.open("PUT", signedUrl);
     request.setRequestHeader("Content-Type", file.type);
     request.upload.onprogress = (event) => {
@@ -35,13 +45,22 @@ function uploadToSignedUrl(
     };
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) {
+        cleanUp();
         resolve();
         return;
       }
+      cleanUp();
       reject(new Error("Upload failed"));
     };
-    request.onerror = () => reject(new Error("Upload failed"));
-    request.onabort = () => reject(new Error("Upload cancelled"));
+    request.onerror = () => {
+      cleanUp();
+      reject(new Error("Upload failed"));
+    };
+    request.onabort = () => {
+      cleanUp();
+      reject(new Error("Upload cancelled"));
+    };
+    signal.addEventListener("abort", abortRequest, { once: true });
     request.send(file);
   });
 }
@@ -53,6 +72,7 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [progress, setProgress] = useState(0);
   const requestRef = useRef<XMLHttpRequest | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
   const recordingIdRef = useRef<string | null>(null);
   const cancelledRef = useRef(false);
 
@@ -80,10 +100,25 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
     setError(null);
     setPhase("uploading");
     setProgress(0);
-    const intent = await createUploadIntent(metadata.data);
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    let intent: Awaited<ReturnType<typeof createUploadIntent>>;
+    try {
+      intent = await createUploadIntent(metadata.data);
+    } catch {
+      if (abortController.signal.aborted) {
+        return;
+      }
+      setError(zhCN.recordings.uploadFailed);
+      setPhase("error");
+      return;
+    }
+    if (abortController.signal.aborted) {
+      return;
+    }
     if (intent.status === "error") {
       setError(intent.message);
-      setPhase("failed");
+      setPhase("error");
       return;
     }
 
@@ -94,25 +129,49 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
         selectedFile,
         setProgress,
         requestRef,
+        abortController.signal,
       );
     } catch {
-      if (cancelledRef.current) return;
+      if (cancelledRef.current || abortController.signal.aborted) {
+        if (
+          abortControllerRef.current &&
+          abortControllerRef.current !== abortController
+        ) {
+          return;
+        }
+        setError(null);
+        setPhase("cancelled");
+        return;
+      }
       setError(zhCN.recordings.uploadFailed);
-      setPhase("failed");
+      setPhase("error");
       return;
+    } finally {
+      if (requestRef.current) requestRef.current = null;
     }
 
-    const result = await finalizeUpload({
-      recordingId: intent.data.recordingId,
-    });
+    let result: Awaited<ReturnType<typeof finalizeUpload>>;
+    try {
+      result = await finalizeUpload({
+        recordingId: intent.data.recordingId,
+      });
+    } catch {
+      setError(zhCN.recordings.uploadFailed);
+      setPhase("error");
+      return;
+    } finally {
+      if (abortControllerRef.current === abortController) {
+        abortControllerRef.current = null;
+      }
+    }
     if (result.status === "error") {
       setError(result.message);
-      setPhase("failed");
+      setPhase("error");
       return;
     }
 
     setProgress(100);
-    setPhase("completed");
+    setPhase("success");
     router.refresh();
   };
 
@@ -124,12 +183,24 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
   };
 
   const cancelCurrentUpload = async () => {
-    if (!recordingIdRef.current) return;
+    const recordingId = recordingIdRef.current;
+    const abortController = abortControllerRef.current;
+    if (!recordingId && !abortController) return;
     cancelledRef.current = true;
-    requestRef.current?.abort();
-    await cancelUpload({ recordingId: recordingIdRef.current });
+    abortController?.abort();
+    abortControllerRef.current = null;
     setError(null);
     setPhase("cancelled");
+    recordingIdRef.current = null;
+
+    if (!recordingId) return;
+
+    try {
+      await cancelUpload({ recordingId });
+      router.refresh();
+    } catch {
+      // The browser request is already cancelled; do not return to uploading.
+    }
   };
 
   return (
@@ -138,7 +209,7 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
         <Label htmlFor="recording-file">{zhCN.recordings.fileLabel}</Label>
         <Input
           accept="audio/mpeg,audio/mp4,audio/wav,audio/webm"
-          disabled={phase === "uploading" || phase === "completed"}
+          disabled={phase === "uploading" || phase === "success"}
           id="recording-file"
           onChange={onFileChange}
           type="file"
@@ -174,7 +245,7 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
         </div>
       ) : null}
 
-      {phase === "failed" && file ? (
+      {phase === "error" && file ? (
         <Button onClick={() => void startUpload(file)} type="button">
           {zhCN.recordings.retryUpload}
         </Button>
@@ -194,7 +265,7 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
           {zhCN.recordings.uploading}
         </p>
       ) : null}
-      {phase === "completed" ? (
+      {phase === "success" ? (
         <p aria-live="polite" className="text-sm" role="status">
           {zhCN.recordings.uploadComplete}
         </p>

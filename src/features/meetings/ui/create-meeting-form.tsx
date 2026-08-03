@@ -59,6 +59,10 @@ export function CreateMeetingForm({
           defaultValue={state.values.meetingDateLocal}
           id="meeting-date"
           name="meetingDateLocal"
+          onChange={(event) => {
+            const input = event.currentTarget;
+            if (input.value && input.validity.valid) input.blur();
+          }}
           required
           type="datetime-local"
         />

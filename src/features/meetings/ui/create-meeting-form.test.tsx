@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/features/meetings/actions/create-meeting", () => ({
@@ -38,5 +38,16 @@ describe("CreateMeetingForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Enter a meeting title.",
     );
+  });
+
+  it("closes the native date-time picker after a valid selection", () => {
+    const blur = vi.spyOn(HTMLInputElement.prototype, "blur");
+    render(<CreateMeetingForm />);
+
+    const meetingDate = screen.getByLabelText("会议日期和时间");
+    fireEvent.change(meetingDate, { target: { value: "2026-08-02T10:30" } });
+
+    expect(meetingDate).toHaveValue("2026-08-02T10:30");
+    expect(blur).toHaveBeenCalledOnce();
   });
 });

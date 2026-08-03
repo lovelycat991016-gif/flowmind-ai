@@ -98,6 +98,8 @@ export function AppHeader({
             <Bell aria-hidden="true" className="size-5" />
           </Button>
 
+          {userActions ? <div className="shrink-0">{userActions}</div> : null}
+
           <div className="relative" id="dashboard-settings" ref={userMenuRef}>
             <button
               aria-label={zhCN.navigation.userMenu}
@@ -131,7 +133,6 @@ export function AppHeader({
                     {userEmail}
                   </p>
                 </div>
-                {userActions ? <div className="pt-2">{userActions}</div> : null}
               </div>
             ) : null}
           </div>

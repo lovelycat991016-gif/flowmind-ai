@@ -58,6 +58,12 @@ describe("AppShell", () => {
     expect(screen.getByRole("menu", { name: "打开用户菜单" })).toBeVisible();
   });
 
+  it("keeps the session reset control directly visible for demo users", () => {
+    renderShell();
+
+    expect(screen.getByRole("button", { name: "退出登录" })).toBeVisible();
+  });
+
   it("opens and closes the mobile navigation with focus return", () => {
     renderShell();
     const trigger = screen.getByRole("button", { name: "打开导航" });
