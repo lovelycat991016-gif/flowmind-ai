@@ -10,7 +10,7 @@ vi.mock("@/shared/lib/supabase/service-role", () => ({
 
 import { claimNextProcessingJob } from "./claim-processing-job";
 
-const workerId = "2c15dfe2-ea8c-420e-85ad-e85901974931";
+const workerId = "transcription-cron:550e8400-e29b-41d4-a716-446655440000";
 const jobRow = {
   id: "911a4a76-8622-49c9-b3d1-a07c55514f91",
   recording_id: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
@@ -72,7 +72,7 @@ describe("claimNextProcessingJob", () => {
 
   it("rejects invalid worker claim input before creating a service-role client", async () => {
     await expect(
-      claimNextProcessingJob({ workerId: "not-a-uuid", leaseSeconds: 0 }),
+      claimNextProcessingJob({ workerId: "", leaseSeconds: 0 }),
     ).rejects.toThrow("Unable to claim processing job.");
     expect(createWorkerServiceRoleClient).not.toHaveBeenCalled();
   });

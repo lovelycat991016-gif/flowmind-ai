@@ -7,7 +7,7 @@ import {
 } from "@/features/transcription/schemas/transcription-input";
 import { createWorkerServiceRoleClient } from "@/shared/lib/supabase/service-role";
 
-const workerIdSchema = z.uuid();
+const workerIdSchema = z.string().trim().min(1).max(100);
 
 const claimedJobSchema = z.object({
   id: z.uuid(),

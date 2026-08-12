@@ -101,6 +101,7 @@ export function createMeetingIntelligenceWorkerRepository(): MeetingIntelligence
         .eq("user_id", job.userId)
         .eq("status", "running")
         .eq("locked_by", job.lockedBy)
+        .gt("lease_expires_at", new Date().toISOString())
         .select("id")
         .maybeSingle();
       if (error || !data)
@@ -121,6 +122,7 @@ export function createMeetingIntelligenceWorkerRepository(): MeetingIntelligence
         .eq("user_id", job.userId)
         .eq("status", "running")
         .eq("locked_by", job.lockedBy)
+        .gt("lease_expires_at", new Date().toISOString())
         .select("id")
         .maybeSingle();
       if (error || !data)

@@ -1,11 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+const mocks = vi.hoisted(() => ({ createInvocationToken: vi.fn() }));
+vi.mock("@/features/transcription/worker/create-invocation-token", () => ({
+  createInvocationToken: mocks.createInvocationToken,
+}));
 import { executeNextMeetingIntelligence } from "./execute-meeting-intelligence";
 const job = {
   id: "a",
   meetingId: "m",
   transcriptId: null,
   userId: "u",
-  lockedBy: "w",
+  lockedBy: "meeting-intelligence-cron:550e8400-e29b-41d4-a716-446655440000",
 };
 const result = {
   provider: "p",
@@ -25,12 +29,15 @@ const setup = () => ({
   fail: vi.fn(),
 });
 describe("executeNextMeetingIntelligence", () => {
+  beforeEach(() => {
+    mocks.createInvocationToken.mockReturnValue(job.lockedBy);
+  });
   it("generates and persists one claimed manual-text result", async () => {
     const dependencies = setup();
     const provider = { generate: vi.fn().mockResolvedValue(result) };
     await expect(
       executeNextMeetingIntelligence({
-        workerId: "w",
+        workerId: "meeting-intelligence-cron",
         leaseSeconds: 60,
         provider,
         dependencies,
@@ -47,7 +54,7 @@ describe("executeNextMeetingIntelligence", () => {
     const provider = { generate: vi.fn() };
     await expect(
       executeNextMeetingIntelligence({
-        workerId: "w",
+        workerId: "meeting-intelligence-cron",
         leaseSeconds: 60,
         provider,
         dependencies,
@@ -63,7 +70,7 @@ describe("executeNextMeetingIntelligence", () => {
     const provider = { generate: vi.fn() };
     await expect(
       executeNextMeetingIntelligence({
-        workerId: "w",
+        workerId: "meeting-intelligence-cron",
         leaseSeconds: 60,
         provider,
         dependencies,

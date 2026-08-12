@@ -37,6 +37,7 @@ describe("Supabase production contract", () => {
       "202607280003_add_meeting_knowledge_job_leases.sql",
       "202607280004_create_knowledge_job_after_transcription.sql",
       "202607280005_add_vector_retrieval_rpc.sql",
+      "202608120001_add_worker_lease_recovery_and_fencing.sql",
     ]);
   });
 

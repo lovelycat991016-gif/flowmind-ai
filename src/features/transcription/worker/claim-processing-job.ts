@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createWorkerServiceRoleClient } from "@/shared/lib/supabase/service-role";
 
 const claimInputSchema = z.object({
-  workerId: z.uuid(),
+  workerId: z.string().trim().min(1).max(100),
   leaseSeconds: z.number().int().min(1).max(3600),
 });
 

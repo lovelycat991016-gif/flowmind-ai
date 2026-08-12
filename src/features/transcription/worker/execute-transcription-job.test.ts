@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getRecordingAudioForClaimedJob: vi.fn(),
   completeTranscriptionJob: vi.fn(),
   failTranscriptionJob: vi.fn(),
+  createInvocationToken: vi.fn(),
 }));
 
 vi.mock("./claim-processing-job", () => ({
@@ -17,11 +18,16 @@ vi.mock("./transcription-job-persistence", () => ({
   completeTranscriptionJob: mocks.completeTranscriptionJob,
   failTranscriptionJob: mocks.failTranscriptionJob,
 }));
+vi.mock("./create-invocation-token", () => ({
+  createInvocationToken: mocks.createInvocationToken,
+}));
 
 import { WhisperProviderError } from "../providers/openai-whisper-provider";
 import { executeNextTranscriptionJob } from "./execute-transcription-job";
 
-const workerId = "2c15dfe2-ea8c-420e-85ad-e85901974931";
+const workerId = "transcription-cron";
+const invocationToken =
+  "transcription-cron:550e8400-e29b-41d4-a716-446655440000";
 const job = {
   id: "911a4a76-8622-49c9-b3d1-a07c55514f91",
   recordingId: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
@@ -29,7 +35,7 @@ const job = {
   attemptCount: 1,
   maxAttempts: 3,
   lockedAt: "2026-07-20T08:00:00.000Z",
-  lockedBy: workerId,
+  lockedBy: invocationToken,
   leaseExpiresAt: "2026-07-20T08:05:00.000Z",
 };
 
@@ -61,6 +67,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.completeTranscriptionJob.mockResolvedValue(undefined);
   mocks.failTranscriptionJob.mockResolvedValue(undefined);
+  mocks.createInvocationToken.mockReturnValue(invocationToken);
 });
 
 describe("executeNextTranscriptionJob", () => {
@@ -78,7 +85,7 @@ describe("executeNextTranscriptionJob", () => {
       }),
     ).resolves.toEqual({ status: "completed", jobId: job.id });
     expect(mocks.claimNextProcessingJob).toHaveBeenCalledWith({
-      workerId,
+      workerId: invocationToken,
       leaseSeconds: 300,
     });
     expect(mocks.getRecordingAudioForClaimedJob).toHaveBeenCalledWith({
@@ -92,7 +99,7 @@ describe("executeNextTranscriptionJob", () => {
     });
     expect(mocks.completeTranscriptionJob).toHaveBeenCalledWith({
       job,
-      workerId,
+      workerId: invocationToken,
       result,
     });
   });
@@ -133,7 +140,7 @@ describe("executeNextTranscriptionJob", () => {
     });
     expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
       job,
-      workerId,
+      workerId: invocationToken,
       code: "provider_rate_limited",
     });
     expect(mocks.completeTranscriptionJob).not.toHaveBeenCalled();

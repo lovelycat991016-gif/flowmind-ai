@@ -10,9 +10,10 @@ import {
   completeTranscriptionJob,
   failTranscriptionJob,
 } from "./transcription-job-persistence";
+import { createInvocationToken } from "./create-invocation-token";
 
 const executionInputSchema = z.object({
-  workerId: z.uuid(),
+  workerId: z.string().trim().min(1).max(64),
   leaseSeconds: z.number().int().min(1).max(3600),
   maxInputBytes: z.number().int().positive(),
 });
@@ -41,10 +42,12 @@ export async function executeNextTranscriptionJob(input: {
     throw new Error("Unable to execute transcription job.");
   }
 
+  const invocationToken = createInvocationToken(parsed.data.workerId);
+
   let job;
   try {
     job = await claimNextProcessingJob({
-      workerId: parsed.data.workerId,
+      workerId: invocationToken,
       leaseSeconds: parsed.data.leaseSeconds,
     });
   } catch {
@@ -52,7 +55,7 @@ export async function executeNextTranscriptionJob(input: {
   }
 
   if (!job) return { status: "idle" as const };
-  if (job.lockedBy !== parsed.data.workerId) {
+  if (job.lockedBy !== invocationToken) {
     throw new Error("Unable to execute transcription job.");
   }
 
@@ -68,7 +71,7 @@ export async function executeNextTranscriptionJob(input: {
     });
     await completeTranscriptionJob({
       job,
-      workerId: parsed.data.workerId,
+      workerId: invocationToken,
       result,
     });
     return { status: "completed" as const, jobId: job.id };
@@ -77,7 +80,7 @@ export async function executeNextTranscriptionJob(input: {
     try {
       await failTranscriptionJob({
         job,
-        workerId: parsed.data.workerId,
+        workerId: invocationToken,
         code,
       });
     } catch {

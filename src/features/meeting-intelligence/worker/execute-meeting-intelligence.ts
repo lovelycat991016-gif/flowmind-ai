@@ -6,6 +6,7 @@ import type { MeetingIntelligenceProvider } from "@/features/meeting-intelligenc
 import { MEETING_INTELLIGENCE_PROMPT_VERSION } from "@/features/ai-providers/prompts/meeting-intelligence-prompt";
 import { recordServerAiUsageEvent } from "@/features/ai-usage/record-ai-usage-event";
 import { createMeetingIntelligenceWorkerRepository } from "./meeting-intelligence-repository";
+import { createInvocationToken } from "@/features/transcription/worker/create-invocation-token";
 
 export type ClaimedMeetingIntelligence = {
   id: string;
@@ -47,12 +48,13 @@ export async function executeNextMeetingIntelligence(input: {
   provider: MeetingIntelligenceProvider;
   dependencies: MeetingIntelligenceWorkerDependencies;
 }) {
+  const invocationToken = createInvocationToken(input.workerId);
   const job = await input.dependencies.claim(
-    input.workerId,
+    invocationToken,
     input.leaseSeconds,
   );
   if (!job) return { status: "idle" as const };
-  if (job.lockedBy !== input.workerId)
+  if (job.lockedBy !== invocationToken)
     throw new Error("Unable to execute meeting intelligence.");
   const startedAt = Date.now();
   try {
