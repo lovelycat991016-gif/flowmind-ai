@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   claimNextProcessingJob: vi.fn(),
@@ -70,6 +70,10 @@ beforeEach(() => {
   mocks.createInvocationToken.mockReturnValue(invocationToken);
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("executeNextTranscriptionJob", () => {
   it("claims one job, transcribes its private audio, and persists the completed transcript", async () => {
     mocks.claimNextProcessingJob.mockResolvedValue(job);
@@ -96,11 +100,72 @@ describe("executeNextTranscriptionJob", () => {
       filename: audio.filename,
       mimeType: audio.mimeType,
       bytes: audio.bytes,
+      signal: expect.any(AbortSignal),
     });
     expect(mocks.completeTranscriptionJob).toHaveBeenCalledWith({
       job,
       workerId: invocationToken,
       result,
+    });
+  });
+
+  it("does not start Whisper after storage consumes the terminal persistence reserve", async () => {
+    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+        now: vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(195_000),
+      }),
+    ).resolves.toEqual({
+      status: "failed",
+      jobId: job.id,
+      code: "provider_timeout",
+    });
+
+    expect(provider.transcribe).not.toHaveBeenCalled();
+    expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
+      job,
+      workerId: invocationToken,
+      code: "provider_timeout",
+    });
+  });
+
+  it("aborts Whisper at the timeout reduced by storage delay", async () => {
+    vi.useFakeTimers();
+    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    provider.transcribe.mockImplementation(({ signal }: { signal?: AbortSignal }) =>
+      new Promise((_, reject) => {
+        signal?.addEventListener("abort", () =>
+          reject(new WhisperProviderError("provider_timeout")),
+        );
+      }),
+    );
+
+    const execution = executeNextTranscriptionJob({
+      workerId,
+      leaseSeconds: 300,
+      maxInputBytes: 1_000,
+      provider,
+      now: vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(180_000),
+    });
+
+    await vi.advanceTimersByTimeAsync(15_000);
+
+    await expect(execution).resolves.toEqual({
+      status: "failed",
+      jobId: job.id,
+      code: "provider_timeout",
+    });
+    expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
+      job,
+      workerId: invocationToken,
+      code: "provider_timeout",
     });
   });
 

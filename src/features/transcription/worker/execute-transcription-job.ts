@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { TranscriptionFailureCode } from "@/entities/transcript/model/transcript";
 import type { TranscriptionProvider } from "@/features/transcription/providers/transcription-provider";
+import { WhisperProviderError } from "@/features/transcription/providers/openai-whisper-provider";
 import { transcriptionFailureCodeSchema } from "@/features/transcription/schemas/transcription-input";
 
 import { claimNextProcessingJob } from "./claim-processing-job";
@@ -11,6 +12,12 @@ import {
   failTranscriptionJob,
 } from "./transcription-job-persistence";
 import { createInvocationToken } from "./create-invocation-token";
+import {
+  calculateInvocationDeadline,
+  TRANSCRIPTION_EXECUTION_BUDGET_MS,
+  TRANSCRIPTION_TERMINAL_RESERVE_MS,
+  WHISPER_TIMEOUT_CAP_MS,
+} from "./invocation-deadline";
 
 const executionInputSchema = z.object({
   workerId: z.string().trim().min(1).max(64),
@@ -36,6 +43,7 @@ export async function executeNextTranscriptionJob(input: {
   leaseSeconds: number;
   maxInputBytes: number;
   provider: TranscriptionProvider;
+  now?: () => number;
 }) {
   const parsed = executionInputSchema.safeParse(input);
   if (!parsed.success || typeof input.provider.transcribe !== "function") {
@@ -43,6 +51,8 @@ export async function executeNextTranscriptionJob(input: {
   }
 
   const invocationToken = createInvocationToken(parsed.data.workerId);
+  const now = input.now ?? Date.now;
+  const startedAtMs = now();
 
   let job;
   try {
@@ -64,11 +74,32 @@ export async function executeNextTranscriptionJob(input: {
       job,
       maxInputBytes: parsed.data.maxInputBytes,
     });
-    const result = await input.provider.transcribe({
-      filename: audio.filename,
-      mimeType: audio.mimeType,
-      bytes: audio.bytes,
+    const deadline = calculateInvocationDeadline({
+      nowMs: now(),
+      startedAtMs,
+      budgetMs: TRANSCRIPTION_EXECUTION_BUDGET_MS,
+      terminalReserveMs: TRANSCRIPTION_TERMINAL_RESERVE_MS,
+      providerCapMs: WHISPER_TIMEOUT_CAP_MS,
     });
+    if (!deadline.providerAllowed) {
+      throw new WhisperProviderError("provider_timeout");
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(
+      () => controller.abort(),
+      deadline.providerTimeoutMs,
+    );
+    let result;
+    try {
+      result = await input.provider.transcribe({
+        filename: audio.filename,
+        mimeType: audio.mimeType,
+        bytes: audio.bytes,
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
     await completeTranscriptionJob({
       job,
       workerId: invocationToken,

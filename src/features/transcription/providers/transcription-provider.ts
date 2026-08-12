@@ -5,6 +5,7 @@ export type TranscriptionRequest = {
   mimeType: string;
   bytes: Uint8Array;
   language?: string;
+  signal?: AbortSignal;
 };
 
 export interface TranscriptionProvider {

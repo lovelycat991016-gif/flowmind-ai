@@ -17,6 +17,7 @@ function response(body: unknown, status = 200) {
 
 describe("OpenAIWhisperTranscriptionProvider", () => {
   it("maps the verbose Whisper response into the provider-neutral transcription result", async () => {
+    const controller = new AbortController();
     const transport = vi.fn().mockResolvedValue(
       response({
         text: "本周项目进展顺利。",
@@ -32,7 +33,7 @@ describe("OpenAIWhisperTranscriptionProvider", () => {
       transport,
     });
 
-    await expect(provider.transcribe(input)).resolves.toEqual({
+    await expect(provider.transcribe({ ...input, signal: controller.signal })).resolves.toEqual({
       provider: "openai",
       providerModel: "whisper-1",
       language: "zh",
@@ -56,6 +57,20 @@ describe("OpenAIWhisperTranscriptionProvider", () => {
     expect(transport.mock.calls[0]?.[0].headers.Authorization).toBe(
       "Bearer test-key",
     );
+    expect(transport.mock.calls[0]?.[0].signal).toBe(controller.signal);
+  });
+
+  it("maps caller cancellation to the safe provider timeout code", async () => {
+    const controller = new AbortController();
+    const provider = new OpenAIWhisperTranscriptionProvider({
+      apiKey: "test-key",
+      transport: vi.fn().mockRejectedValue(new DOMException("", "AbortError")),
+    });
+
+    controller.abort();
+    await expect(provider.transcribe({ ...input, signal: controller.signal })).rejects.toMatchObject({
+      code: "provider_timeout",
+    });
   });
 
   it("returns a safe error when the provider response cannot satisfy the transcript contract", async () => {

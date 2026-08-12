@@ -13,6 +13,7 @@ type WhisperTransportRequest = {
   url: string;
   headers: { Authorization: string };
   body: FormData;
+  signal?: AbortSignal;
 };
 
 export type WhisperTransport = (
@@ -97,6 +98,7 @@ export class OpenAIWhisperTranscriptionProvider implements TranscriptionProvider
           method: "POST",
           headers: request.headers,
           body: request.body,
+          signal: request.signal,
         }));
   }
 
@@ -120,6 +122,7 @@ export class OpenAIWhisperTranscriptionProvider implements TranscriptionProvider
         url: OPENAI_TRANSCRIPTIONS_URL,
         headers: { Authorization: `Bearer ${this.options.apiKey}` },
         body: formData,
+        signal: input.signal,
       });
     } catch (error) {
       throw new WhisperProviderError(mapTransportFailure(error));
