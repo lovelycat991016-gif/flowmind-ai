@@ -13,6 +13,7 @@
     "demo:fixtures:seed": "vite-node --config vitest.config.ts scripts/demo-fixtures/run-demo-fixtures.ts seed",
     "demo:fixtures:reset": "vite-node --config vitest.config.ts scripts/demo-fixtures/run-demo-fixtures.ts reset",
     "demo:fixtures:verify": "vite-node --config vitest.config.ts scripts/demo-fixtures/run-demo-fixtures.ts verify",
+    "reindex:embeddings": "vite-node --config vitest.config.ts scripts/reindex-embeddings.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
