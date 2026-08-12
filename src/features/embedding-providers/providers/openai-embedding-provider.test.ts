@@ -11,6 +11,19 @@ afterEach(() => {
 });
 
 describe("OpenAIEmbeddingProvider", () => {
+  it("maps caller cancellation to the safe timeout code", async () => {
+    const controller = new AbortController();
+    const provider = new OpenAIEmbeddingProvider({
+      apiKey: "test-key",
+      model: "text-embedding-3-small",
+      transport: vi.fn().mockRejectedValue(new DOMException("", "AbortError")),
+    });
+    controller.abort();
+
+    await expect(provider.embed("test", { signal: controller.signal })).rejects.toMatchObject({
+      code: "timeout",
+    });
+  });
   it("maps a production embedding response to a 1536-dimension vector", async () => {
     const vector = Array.from({ length: 1536 }, () => 0.25);
     const transport = vi.fn().mockResolvedValue(

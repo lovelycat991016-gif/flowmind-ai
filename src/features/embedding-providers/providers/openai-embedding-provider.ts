@@ -77,8 +77,11 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
         }));
   }
 
-  async embed(text: string): Promise<number[]> {
+  async embed(text: string, options?: { signal?: AbortSignal }): Promise<number[]> {
     const controller = new AbortController();
+    const abort = () => controller.abort();
+    options?.signal?.addEventListener("abort", abort, { once: true });
+    if (options?.signal?.aborted) controller.abort();
     const timeout = setTimeout(
       () => controller.abort(),
       EMBEDDING_REQUEST_TIMEOUT_MS,
@@ -104,6 +107,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
       );
     } finally {
       clearTimeout(timeout);
+      options?.signal?.removeEventListener("abort", abort);
     }
     if (!response.ok) {
       throw new EmbeddingProviderError(mapHttpFailure(response.status));

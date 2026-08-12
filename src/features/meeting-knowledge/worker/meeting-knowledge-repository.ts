@@ -33,12 +33,12 @@ export function createMeetingKnowledgeRepository(): MeetingKnowledgeDependencies
       }
     },
     async complete(job) {
-      const { error } = await createWorkerServiceRoleClient().from("meeting_knowledge_jobs").update({ status: "completed", locked_by: null, lease_expires_at: null, last_error_code: null }).eq("id", job.id).eq("user_id", job.userId).eq("status", "processing").eq("locked_by", job.lockedBy);
-      if (error) throw new Error("Unable to complete meeting knowledge job.");
+      const { data, error } = await createWorkerServiceRoleClient().from("meeting_knowledge_jobs").update({ status: "completed", locked_by: null, lease_expires_at: null, last_error_code: null }).eq("id", job.id).eq("user_id", job.userId).eq("status", "processing").eq("locked_by", job.lockedBy).gt("lease_expires_at", new Date().toISOString()).select("id").maybeSingle();
+      if (error || !data) throw new Error("Unable to complete meeting knowledge job.");
     },
     async fail(job, code) {
-      const { error } = await createWorkerServiceRoleClient().from("meeting_knowledge_jobs").update({ status: "failed", locked_by: null, lease_expires_at: null, last_error_code: code }).eq("id", job.id).eq("user_id", job.userId).eq("status", "processing").eq("locked_by", job.lockedBy);
-      if (error) throw new Error("Unable to fail meeting knowledge job.");
+      const { data, error } = await createWorkerServiceRoleClient().from("meeting_knowledge_jobs").update({ status: "failed", locked_by: null, lease_expires_at: null, last_error_code: code }).eq("id", job.id).eq("user_id", job.userId).eq("status", "processing").eq("locked_by", job.lockedBy).gt("lease_expires_at", new Date().toISOString()).select("id").maybeSingle();
+      if (error || !data) throw new Error("Unable to fail meeting knowledge job.");
     },
   };
 }
