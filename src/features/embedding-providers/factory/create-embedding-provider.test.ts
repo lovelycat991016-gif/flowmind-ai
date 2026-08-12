@@ -40,6 +40,16 @@ describe("createEmbeddingProvider", () => {
     });
   });
 
+  it("rejects an OpenAI selection without complete server-only configuration", () => {
+    process.env.EMBEDDING_PROVIDER = "openai";
+    process.env.EMBEDDING_MODEL = "text-embedding-3-small";
+    delete process.env.EMBEDDING_API_KEY;
+
+    expect(() => createEmbeddingProvider()).toThrow(
+      "Embedding provider configuration is invalid.",
+    );
+  });
+
   it("rejects an explicit DeepSeek or unknown embedding provider", () => {
     for (const provider of ["deepseek", "unknown"]) {
       process.env.EMBEDDING_PROVIDER = provider;

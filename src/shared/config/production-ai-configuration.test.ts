@@ -29,5 +29,7 @@ describe("production AI configuration contract", () => {
     expect(document).toContain("mock");
     expect(document).toContain("must fail safely");
     expect(document).toContain("Usage Event");
+    expect(document).toContain("EMBEDDING_PROVIDER=openai");
+    expect(document).not.toContain("NEXT_PUBLIC_EMBEDDING_API_KEY=");
   });
 });

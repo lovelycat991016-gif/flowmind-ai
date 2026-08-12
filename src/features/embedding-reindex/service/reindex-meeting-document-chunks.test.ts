@@ -39,6 +39,12 @@ describe("reindexMeetingDocumentChunks", () => {
     await expect(reindexMeetingDocumentChunks({ ownerId, batchSize: 101 }, dependencies())).rejects.toThrow("Embedding reindex input is invalid.");
   });
 
+  it("does not initialize page work when Preview authorization fails", async () => {
+    const deps = dependencies({ environment: "production" });
+    await expect(reindexMeetingDocumentChunks({ ownerId, batchSize: 1 }, deps)).rejects.toThrow("Embedding reindex is only available in Preview.");
+    expect(deps.loadPage).not.toHaveBeenCalled();
+  });
+
   it("decodes the cursor and scopes the next page to the same owner", async () => {
     const deps = dependencies({ loadPage: vi.fn().mockResolvedValue([]) });
     const cursor = Buffer.from(JSON.stringify({ transcriptId: "00000000-0000-4000-8000-000000000001", chunkIndex: 4 })).toString("base64url");

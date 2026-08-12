@@ -34,6 +34,23 @@ describe("embedding provider environment", () => {
     ).toThrow("Embedding provider configuration is invalid.");
   });
 
+  it("fails safely when a production embedding secret or model is blank", () => {
+    expect(() =>
+      parseEmbeddingProviderEnv({
+        EMBEDDING_PROVIDER: "openai",
+        EMBEDDING_MODEL: "   ",
+        EMBEDDING_API_KEY: "private-key",
+      }),
+    ).toThrow("Embedding provider configuration is invalid.");
+    expect(() =>
+      parseEmbeddingProviderEnv({
+        EMBEDDING_PROVIDER: "openai",
+        EMBEDDING_MODEL: "text-embedding-3-small",
+        EMBEDDING_API_KEY: "   ",
+      }),
+    ).toThrow("Embedding provider configuration is invalid.");
+  });
+
   it("defaults to mock only when no embedding provider is configured", () => {
     expect(parseEmbeddingProviderEnv({})).toEqual({ provider: "mock" });
   });

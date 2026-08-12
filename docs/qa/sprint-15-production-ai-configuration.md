@@ -38,6 +38,19 @@ approved server-only `EMBEDDING_API_KEY` and `EMBEDDING_MODEL`, returning
 exactly 1536 finite values because `meeting_document_chunks.embedding` is
 `vector(1536)`.
 
+The current OpenAI-compatible adapter can be enabled only after Preview
+validation with an approved 1536-dimension model:
+
+```text
+EMBEDDING_PROVIDER=openai
+EMBEDDING_MODEL=<approved-1536-dimension-model>
+EMBEDDING_API_KEY=<server-only-secret>
+```
+
+Set these values only in Vercel Project Settings. Before production cutover,
+re-index existing Mock vectors with the same approved model used for query
+embeddings; Mock and real embeddings must not be mixed in semantic retrieval.
+
 `AI_PROVIDER` and `EMBEDDING_PROVIDER` have independent lifecycles. Do not set
 `EMBEDDING_PROVIDER=deepseek` until a verified DeepSeek embedding adapter and
 1536-dimension compatibility plan have been approved. A change to the embedding

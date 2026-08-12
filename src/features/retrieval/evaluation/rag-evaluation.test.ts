@@ -14,4 +14,9 @@ describe("Chinese RAG evaluation fixture", () => {
     expect(evaluateRagCase(testCase, [{ meetingId: "wrong", chunkIndex: 0 }], [{ meetingId: "wrong", chunkIndex: 0 }])).toMatchObject({ hit: false, sourceAccurate: false, citationCorrect: false });
     expect(evaluateRagCase(testCase, [], [])).toEqual({ hit: false, sourceAccurate: false, citationCorrect: true, fallback: true });
   });
+
+  it("rejects a citation that was not returned by retrieval", () => {
+    const testCase = ragEvaluationCases[2];
+    expect(evaluateRagCase(testCase, [{ meetingId: testCase.expectedMeetingId, chunkIndex: testCase.expectedChunkIndex }], [{ meetingId: "invented", chunkIndex: 0 }])).toMatchObject({ hit: true, sourceAccurate: true, citationCorrect: false });
+  });
 });
