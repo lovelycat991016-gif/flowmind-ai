@@ -1,6 +1,11 @@
 import type { MeetingIntelligenceGenerationStatus } from "@/entities/meeting-intelligence/model/meeting-intelligence";
 import { meetingIntelligenceResultSchema } from "@/features/meeting-intelligence/schemas/meeting-intelligence-input";
 import { reportServerEvent } from "@/shared/observability/server";
+import {
+  createSupabaseErrorDiagnostic,
+  type DashboardQuery,
+  type DashboardTable,
+} from "@/shared/observability/server";
 import { createClient } from "@/shared/lib/supabase/server";
 
 export type DashboardAttention = {
@@ -28,6 +33,33 @@ function utcDayRange(now: Date) {
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
   return { start: start.toISOString(), end: end.toISOString() };
+}
+
+async function reportDashboardQueryFailures(input: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  failures: Array<{ table: DashboardTable; query: DashboardQuery; error: unknown }>;
+  startedAt: number;
+}) {
+  let authenticatedUserPresent = false;
+  try {
+    const { data } = await input.supabase.auth.getUser();
+    authenticatedUserPresent = Boolean(data.user);
+  } catch {
+    // Preserve the original query failure and report session absence safely.
+  }
+  for (const failure of input.failures) {
+    reportServerEvent({
+      category: "supabase",
+      operation: "dashboard_meeting_query",
+      outcome: "failure",
+      failureCode: "supabase_query_failed",
+      durationMs: Date.now() - input.startedAt,
+      supabaseDiagnostic: createSupabaseErrorDiagnostic({
+        ...failure,
+        authenticatedUserPresent,
+      }),
+    });
+  }
 }
 
 export async function getDashboardAttention(): Promise<DashboardAttention> {
@@ -60,19 +92,18 @@ export async function getDashboardAttention(): Promise<DashboardAttention> {
       openTasksQuery,
       intelligenceQuery,
     ]);
-  if (
-    todayMeetings.error ||
-    completedIntelligence.error ||
-    openTasks.error ||
-    intelligence.error
-  ) {
-    reportServerEvent({
-      category: "supabase",
-      operation: "dashboard_meeting_query",
-      outcome: "failure",
-      failureCode: "supabase_query_failed",
-      durationMs: Date.now() - startedAt,
-    });
+  const failures = [
+    { table: "meetings", query: "meetings_today", error: todayMeetings.error },
+    { table: "meeting_intelligence", query: "intelligence_completed", error: completedIntelligence.error },
+    { table: "action_items", query: "action_items_open", error: openTasks.error },
+    { table: "meeting_intelligence", query: "intelligence_recent", error: intelligence.error },
+  ].filter((failure) => Boolean(failure.error)) as Array<{
+    table: DashboardTable;
+    query: DashboardQuery;
+    error: unknown;
+  }>;
+  if (failures.length > 0) {
+    await reportDashboardQueryFailures({ supabase, failures, startedAt });
     throw new Error("Unable to load dashboard AI workspace data.");
   }
 
@@ -91,12 +122,16 @@ export async function getDashboardAttention(): Promise<DashboardAttention> {
       .select("id,title")
       .in("id", meetingIds);
     if (error) {
-      reportServerEvent({
-        category: "supabase",
-        operation: "dashboard_meeting_query",
-        outcome: "failure",
-        failureCode: "supabase_query_failed",
-        durationMs: Date.now() - startedAt,
+      await reportDashboardQueryFailures({
+        supabase,
+        failures: [
+          {
+            table: "meetings",
+            query: "meetings_for_intelligence",
+            error,
+          },
+        ],
+        startedAt,
       });
       throw new Error("Unable to load dashboard AI workspace data.");
     }

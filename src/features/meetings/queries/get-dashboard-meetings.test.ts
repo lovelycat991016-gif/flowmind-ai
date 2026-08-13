@@ -1,7 +1,17 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-const { createClientMock, reportServerEventMock } = vi.hoisted(() => ({
+const { createClientMock, createSupabaseErrorDiagnosticMock, reportServerEventMock } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
+  createSupabaseErrorDiagnosticMock: vi.fn(
+    ({ table, query, error, authenticatedUserPresent }) => ({
+      table,
+      query,
+      errorCode: error?.code,
+      errorMessageSummary:
+        error?.code === "42P01" ? "relation_not_found" : "request_failed",
+      authenticatedUserPresent,
+    }),
+  ),
   reportServerEventMock: vi.fn(),
 }));
 
@@ -9,6 +19,7 @@ vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: createClientMock,
 }));
 vi.mock("@/shared/observability/server", () => ({
+  createSupabaseErrorDiagnostic: createSupabaseErrorDiagnosticMock,
   reportServerEvent: reportServerEventMock,
 }));
 
@@ -126,6 +137,7 @@ it("reports a safe structured event for a failing Supabase query", async () => {
   recent.is.mockReturnValue(recent);
   recent.order.mockReturnValue(recent);
   createClientMock.mockResolvedValue({
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: "owner-id" } } }) },
     from: vi
       .fn()
       .mockReturnValueOnce(failed)
@@ -140,12 +152,17 @@ it("reports a safe structured event for a failing Supabase query", async () => {
     "Unable to load dashboard meeting data.",
   );
 
-  expect(reportServerEventMock).toHaveBeenCalledWith(
-    expect.objectContaining({
-      category: "supabase",
-      operation: "dashboard_meeting_query",
-      outcome: "failure",
-      failureCode: "supabase_query_failed",
-    }),
-  );
+  expect(reportServerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+    category: "supabase",
+    operation: "dashboard_meeting_query",
+    outcome: "failure",
+    failureCode: "supabase_query_failed",
+    supabaseDiagnostic: {
+      table: "meetings",
+      query: "meetings_total",
+      errorCode: "42P01",
+      errorMessageSummary: "relation_not_found",
+      authenticatedUserPresent: true,
+    },
+  }));
 });

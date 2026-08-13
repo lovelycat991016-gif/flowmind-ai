@@ -1,7 +1,17 @@
 import { afterEach, expect, it, vi } from "vitest";
 
-const { createClientMock, reportServerEventMock } = vi.hoisted(() => ({
+const { createClientMock, createSupabaseErrorDiagnosticMock, reportServerEventMock } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
+  createSupabaseErrorDiagnosticMock: vi.fn(
+    ({ table, query, error, authenticatedUserPresent }) => ({
+      table,
+      query,
+      errorCode: error?.code,
+      errorMessageSummary:
+        error?.code === "42P01" ? "relation_not_found" : "request_failed",
+      authenticatedUserPresent,
+    }),
+  ),
   reportServerEventMock: vi.fn(),
 }));
 
@@ -9,6 +19,7 @@ vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: createClientMock,
 }));
 vi.mock("@/shared/observability/server", () => ({
+  createSupabaseErrorDiagnostic: createSupabaseErrorDiagnosticMock,
   reportServerEvent: reportServerEventMock,
 }));
 
@@ -134,12 +145,22 @@ it("derives explainable AI workspace attention from owner-scoped persisted data"
 it("keeps Supabase query failures safe and observable", async () => {
   const error = { code: "42P01", message: "internal table name" };
   const failed = countQuery(null, error);
-  createClientMock.mockResolvedValue({ from: vi.fn().mockReturnValue(failed) });
+  createClientMock.mockResolvedValue({
+    auth: { getUser: vi.fn().mockResolvedValue({ data: { user: null } }) },
+    from: vi.fn().mockReturnValue(failed),
+  });
 
   await expect(getDashboardAttention()).rejects.toThrow(
     "Unable to load dashboard AI workspace data.",
   );
-  expect(reportServerEventMock).toHaveBeenCalledWith(
-    expect.objectContaining({ operation: "dashboard_meeting_query" }),
-  );
+  expect(reportServerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+    operation: "dashboard_meeting_query",
+    supabaseDiagnostic: {
+      table: "meetings",
+      query: "meetings_today",
+      errorCode: "42P01",
+      errorMessageSummary: "relation_not_found",
+      authenticatedUserPresent: false,
+    },
+  }));
 });

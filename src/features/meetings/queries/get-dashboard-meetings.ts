@@ -4,7 +4,12 @@ import type {
 } from "@/entities/meeting/model/meeting";
 import { mapMeetingRow } from "@/entities/meeting/model/meeting";
 import { createClient } from "@/shared/lib/supabase/server";
-import { reportServerEvent } from "@/shared/observability/server";
+import {
+  createSupabaseErrorDiagnostic,
+  type DashboardQuery,
+  type DashboardTable,
+  reportServerEvent,
+} from "@/shared/observability/server";
 
 const MEETING_COLUMNS =
   "id,title,meeting_date,archived_at,created_at,updated_at";
@@ -19,6 +24,33 @@ function startOfUtcWeek(now: Date) {
       now.getUTCDate() - daysSinceMonday,
     ),
   ).toISOString();
+}
+
+async function reportDashboardQueryFailures(input: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  failures: Array<{ table: DashboardTable; query: DashboardQuery; error: unknown }>;
+  startedAt: number;
+}) {
+  let authenticatedUserPresent = false;
+  try {
+    const { data } = await input.supabase.auth.getUser();
+    authenticatedUserPresent = Boolean(data.user);
+  } catch {
+    // Preserve the original query failure and report session absence safely.
+  }
+  for (const failure of input.failures) {
+    reportServerEvent({
+      category: "supabase",
+      operation: "dashboard_meeting_query",
+      outcome: "failure",
+      failureCode: "supabase_query_failed",
+      durationMs: Date.now() - input.startedAt,
+      supabaseDiagnostic: createSupabaseErrorDiagnostic({
+        ...failure,
+        authenticatedUserPresent,
+      }),
+    });
+  }
 }
 
 export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
@@ -67,22 +99,21 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
       completedTasksQuery,
     ]);
 
-  if (
-    total.error ||
-    active.error ||
-    archived.error ||
-    thisWeek.error ||
-    recent.error ||
-    openTasks.error ||
-    completedTasks.error
-  ) {
-    reportServerEvent({
-      category: "supabase",
-      operation: "dashboard_meeting_query",
-      outcome: "failure",
-      failureCode: "supabase_query_failed",
-      durationMs: Date.now() - startedAt,
-    });
+  const failures = [
+    { table: "meetings", query: "meetings_total", error: total.error },
+    { table: "meetings", query: "meetings_active", error: active.error },
+    { table: "meetings", query: "meetings_archived", error: archived.error },
+    { table: "meetings", query: "meetings_this_week", error: thisWeek.error },
+    { table: "meetings", query: "meetings_recent", error: recent.error },
+    { table: "action_items", query: "action_items_open", error: openTasks.error },
+    { table: "action_items", query: "action_items_completed", error: completedTasks.error },
+  ].filter((failure) => Boolean(failure.error)) as Array<{
+    table: DashboardTable;
+    query: DashboardQuery;
+    error: unknown;
+  }>;
+  if (failures.length > 0) {
+    await reportDashboardQueryFailures({ supabase, failures, startedAt });
     throw new Error("Unable to load dashboard meeting data.");
   }
 

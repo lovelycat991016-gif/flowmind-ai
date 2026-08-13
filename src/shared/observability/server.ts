@@ -29,9 +29,43 @@ const failureCodes = [
   "unexpected",
 ] as const;
 
+const dashboardTables = [
+  "meetings",
+  "action_items",
+  "meeting_intelligence",
+] as const;
+
+const dashboardQueries = [
+  "meetings_total",
+  "meetings_active",
+  "meetings_archived",
+  "meetings_this_week",
+  "meetings_recent",
+  "meetings_today",
+  "meetings_for_intelligence",
+  "action_items_open",
+  "action_items_completed",
+  "intelligence_completed",
+  "intelligence_recent",
+] as const;
+
 export type ServerLogCategory = (typeof categories)[number];
 export type ServerLogOperation = (typeof operations)[number];
 export type ServerLogFailureCode = (typeof failureCodes)[number];
+export type DashboardTable = (typeof dashboardTables)[number];
+export type DashboardQuery = (typeof dashboardQueries)[number];
+
+export type SupabaseErrorDiagnostic = {
+  table: DashboardTable;
+  query: DashboardQuery;
+  errorCode?: string;
+  errorMessageSummary?:
+    | "permission_denied"
+    | "relation_not_found"
+    | "column_not_found"
+    | "request_failed";
+  authenticatedUserPresent: boolean;
+};
 
 export type ServerLogInput = {
   category: ServerLogCategory;
@@ -39,6 +73,7 @@ export type ServerLogInput = {
   outcome: "success" | "failure";
   failureCode?: ServerLogFailureCode;
   durationMs?: number;
+  supabaseDiagnostic?: SupabaseErrorDiagnostic;
 };
 
 export type ServerLogEvent = {
@@ -49,6 +84,7 @@ export type ServerLogEvent = {
   outcome: "success" | "failure";
   failureCode?: ServerLogFailureCode;
   durationMs?: number;
+  supabaseDiagnostic?: SupabaseErrorDiagnostic;
 };
 
 export type ServerLogSink = (serializedEvent: string) => void;
@@ -64,6 +100,41 @@ function safeDuration(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
 
   return Math.min(Math.max(Math.round(value), 0), 600_000);
+}
+
+function safePostgresCode(value: unknown) {
+  return typeof value === "string" && /^[0-9A-Z]{5}$/.test(value)
+    ? value
+    : undefined;
+}
+
+function safeErrorMessageSummary(code: string | undefined) {
+  if (code === "42501") return "permission_denied" as const;
+  if (code === "42P01") return "relation_not_found" as const;
+  if (code === "42703") return "column_not_found" as const;
+  return "request_failed" as const;
+}
+
+export function createSupabaseErrorDiagnostic(input: {
+  table: DashboardTable;
+  query: DashboardQuery;
+  error: unknown;
+  authenticatedUserPresent: boolean;
+}): SupabaseErrorDiagnostic {
+  const code =
+    input.error &&
+    typeof input.error === "object" &&
+    "code" in input.error
+      ? safePostgresCode(input.error.code)
+      : undefined;
+
+  return {
+    table: input.table,
+    query: input.query,
+    ...(code ? { errorCode: code } : {}),
+    errorMessageSummary: safeErrorMessageSummary(code),
+    authenticatedUserPresent: input.authenticatedUserPresent,
+  };
 }
 
 export function createServerLogEvent(input: ServerLogInput): ServerLogEvent {
@@ -82,6 +153,7 @@ export function createServerLogEvent(input: ServerLogInput): ServerLogEvent {
     ? untrusted.failureCode
     : undefined;
   const durationMs = safeDuration(untrusted.durationMs);
+  const supabaseDiagnostic = untrusted.supabaseDiagnostic;
 
   return {
     timestamp: new Date().toISOString(),
@@ -91,6 +163,34 @@ export function createServerLogEvent(input: ServerLogInput): ServerLogEvent {
     outcome,
     ...(failureCode ? { failureCode } : {}),
     ...(durationMs === undefined ? {} : { durationMs }),
+    ...(supabaseDiagnostic &&
+    isMember(dashboardTables, supabaseDiagnostic.table) &&
+    isMember(dashboardQueries, supabaseDiagnostic.query) &&
+    typeof supabaseDiagnostic.authenticatedUserPresent === "boolean"
+      ? {
+          supabaseDiagnostic: {
+            table: supabaseDiagnostic.table,
+            query: supabaseDiagnostic.query,
+            ...(safePostgresCode(supabaseDiagnostic.errorCode)
+              ? { errorCode: safePostgresCode(supabaseDiagnostic.errorCode) }
+              : {}),
+            ...(supabaseDiagnostic.errorMessageSummary &&
+            [
+              "permission_denied",
+              "relation_not_found",
+              "column_not_found",
+              "request_failed",
+            ].includes(supabaseDiagnostic.errorMessageSummary)
+              ? {
+                  errorMessageSummary:
+                    supabaseDiagnostic.errorMessageSummary,
+                }
+              : {}),
+            authenticatedUserPresent:
+              supabaseDiagnostic.authenticatedUserPresent,
+          },
+        }
+      : {}),
   };
 }
 
