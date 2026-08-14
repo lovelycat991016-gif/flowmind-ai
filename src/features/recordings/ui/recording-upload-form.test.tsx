@@ -11,6 +11,7 @@ const actions = vi.hoisted(() => ({
   cancelUpload: vi.fn(),
   createUploadIntent: vi.fn(),
   finalizeUpload: vi.fn(),
+  reportRecordingUploadFailure: vi.fn(),
 }));
 const navigation = vi.hoisted(() => ({ refresh: vi.fn() }));
 
@@ -22,6 +23,9 @@ vi.mock("@/features/recordings/actions/create-upload-intent", () => ({
 }));
 vi.mock("@/features/recordings/actions/finalize-upload", () => ({
   finalizeUpload: actions.finalizeUpload,
+}));
+vi.mock("@/features/recordings/actions/report-recording-upload-failure", () => ({
+  reportRecordingUploadFailure: actions.reportRecordingUploadFailure,
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: navigation.refresh }),
@@ -68,6 +72,11 @@ class UploadRequest {
   fail() {
     this.onerror?.();
   }
+
+  failWithStatus(status: number) {
+    this.status = status;
+    this.onload?.();
+  }
 }
 
 class UploadAbortController {
@@ -112,6 +121,7 @@ beforeEach(() => {
     status: "success",
     data: { recordingId },
   });
+  actions.reportRecordingUploadFailure.mockResolvedValue(undefined);
 });
 
 describe("RecordingUploadForm", () => {
@@ -195,6 +205,46 @@ describe("RecordingUploadForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "重试上传" }));
     await waitFor(() =>
       expect(actions.createUploadIntent).toHaveBeenCalledTimes(2),
+    );
+  });
+
+  it.each([
+    [401, "http_401"],
+    [403, "http_403"],
+    [404, "http_404"],
+    [409, "http_409"],
+    [413, "http_413"],
+    [500, "other_http"],
+  ] as const)("reports safe signed upload HTTP category %i", async (status, errorCategory) => {
+    successfulIntent();
+    render(<RecordingUploadForm meetingId={meetingId} />);
+    fireEvent.change(screen.getByLabelText("选择录音文件"), {
+      target: { files: [audioFile()] },
+    });
+    await waitFor(() => expect(UploadRequest.latest).not.toBeNull());
+    act(() => UploadRequest.latest?.failWithStatus(status));
+
+    await waitFor(() =>
+      expect(actions.reportRecordingUploadFailure).toHaveBeenCalledWith({
+        errorCategory,
+        errorCode: String(status),
+      }),
+    );
+  });
+
+  it("reports a network upload failure without transport details", async () => {
+    successfulIntent();
+    render(<RecordingUploadForm meetingId={meetingId} />);
+    fireEvent.change(screen.getByLabelText("选择录音文件"), {
+      target: { files: [audioFile()] },
+    });
+    await waitFor(() => expect(UploadRequest.latest).not.toBeNull());
+    act(() => UploadRequest.latest?.fail());
+
+    await waitFor(() =>
+      expect(actions.reportRecordingUploadFailure).toHaveBeenCalledWith({
+        errorCategory: "network",
+      }),
     );
   });
 

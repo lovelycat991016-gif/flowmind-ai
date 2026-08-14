@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  createRecordingUploadDiagnostic,
   createServerLogEvent,
   createSupabaseErrorDiagnostic,
   reportServerEvent,
@@ -80,5 +81,49 @@ describe("server observability", () => {
     expect(JSON.stringify(event)).not.toMatch(
       /private-token|Authorization|Bearer|permission denied for table meetings/,
     );
+  });
+
+  it("records an allowlisted recording upload diagnostic without raw transport data", () => {
+    const event = createServerLogEvent({
+      category: "storage",
+      operation: "recording_upload_intent",
+      outcome: "failure",
+      failureCode: "storage_operation_failed",
+      recordingUploadDiagnostic: createRecordingUploadDiagnostic({
+        stage: "direct_upload",
+        errorCategory: "http_403",
+        errorCode: "403",
+        authenticatedUserPresent: true,
+      }),
+    });
+
+    expect(event.recordingUploadDiagnostic).toEqual({
+      stage: "direct_upload",
+      errorCategory: "http_403",
+      errorCode: "403",
+      authenticatedUserPresent: true,
+    });
+    expect(JSON.stringify(event)).not.toMatch(/signed|token|cookie|owner|secret/i);
+  });
+
+  it("drops non-allowlisted recording upload values before serializing", () => {
+    const event = createServerLogEvent({
+      category: "storage",
+      operation: "recording_upload_finalize",
+      outcome: "failure",
+      recordingUploadDiagnostic: {
+        stage: "finalize_storage_list",
+        errorCategory: "storage",
+        errorCode: "Bearer private-token" as string,
+        authenticatedUserPresent: true,
+      },
+    });
+
+    expect(event.recordingUploadDiagnostic).toEqual({
+      stage: "finalize_storage_list",
+      errorCategory: "storage",
+      authenticatedUserPresent: true,
+    });
+    expect(JSON.stringify(event)).not.toMatch(/bearer|private-token/i);
   });
 });

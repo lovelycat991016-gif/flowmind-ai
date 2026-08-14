@@ -49,11 +49,39 @@ const dashboardQueries = [
   "intelligence_recent",
 ] as const;
 
+const recordingUploadStages = [
+  "intent_meeting_lookup",
+  "intent_recording_insert",
+  "intent_signed_url",
+  "intent_status_update",
+  "direct_upload",
+  "finalize_recording_lookup",
+  "finalize_storage_list",
+  "finalize_recording_update",
+  "finalize_processing_job",
+] as const;
+
+const recordingUploadErrorCategories = [
+  "supabase_query",
+  "supabase_mutation",
+  "storage",
+  "network",
+  "http_401",
+  "http_403",
+  "http_404",
+  "http_409",
+  "http_413",
+  "other_http",
+] as const;
+
 export type ServerLogCategory = (typeof categories)[number];
 export type ServerLogOperation = (typeof operations)[number];
 export type ServerLogFailureCode = (typeof failureCodes)[number];
 export type DashboardTable = (typeof dashboardTables)[number];
 export type DashboardQuery = (typeof dashboardQueries)[number];
+export type RecordingUploadStage = (typeof recordingUploadStages)[number];
+export type RecordingUploadErrorCategory =
+  (typeof recordingUploadErrorCategories)[number];
 
 export type SupabaseErrorDiagnostic = {
   table: DashboardTable;
@@ -67,6 +95,13 @@ export type SupabaseErrorDiagnostic = {
   authenticatedUserPresent: boolean;
 };
 
+export type RecordingUploadDiagnostic = {
+  stage: RecordingUploadStage;
+  errorCategory: RecordingUploadErrorCategory;
+  errorCode?: string;
+  authenticatedUserPresent: boolean;
+};
+
 export type ServerLogInput = {
   category: ServerLogCategory;
   operation: ServerLogOperation;
@@ -74,6 +109,7 @@ export type ServerLogInput = {
   failureCode?: ServerLogFailureCode;
   durationMs?: number;
   supabaseDiagnostic?: SupabaseErrorDiagnostic;
+  recordingUploadDiagnostic?: RecordingUploadDiagnostic;
 };
 
 export type ServerLogEvent = {
@@ -85,6 +121,7 @@ export type ServerLogEvent = {
   failureCode?: ServerLogFailureCode;
   durationMs?: number;
   supabaseDiagnostic?: SupabaseErrorDiagnostic;
+  recordingUploadDiagnostic?: RecordingUploadDiagnostic;
 };
 
 export type ServerLogSink = (serializedEvent: string) => void;
@@ -104,6 +141,12 @@ function safeDuration(value: unknown) {
 
 function safePostgresCode(value: unknown) {
   return typeof value === "string" && /^[0-9A-Z]{5}$/.test(value)
+    ? value
+    : undefined;
+}
+
+function safeUploadErrorCode(value: unknown) {
+  return typeof value === "string" && /^(?:[0-9]{3}|[0-9A-Z]{5})$/.test(value)
     ? value
     : undefined;
 }
@@ -137,6 +180,31 @@ export function createSupabaseErrorDiagnostic(input: {
   };
 }
 
+export function createRecordingUploadDiagnostic(
+  input: RecordingUploadDiagnostic,
+): RecordingUploadDiagnostic {
+  return {
+    stage: input.stage,
+    errorCategory: input.errorCategory,
+    ...(safeUploadErrorCode(input.errorCode)
+      ? { errorCode: safeUploadErrorCode(input.errorCode) }
+      : {}),
+    authenticatedUserPresent: input.authenticatedUserPresent,
+  };
+}
+
+export function recordingUploadErrorCode(error: unknown) {
+  if (!error || typeof error !== "object") return undefined;
+
+  const candidate =
+    "code" in error
+      ? error.code
+      : "statusCode" in error
+        ? error.statusCode
+        : undefined;
+  return safeUploadErrorCode(candidate);
+}
+
 export function createServerLogEvent(input: ServerLogInput): ServerLogEvent {
   const untrusted = input as Partial<ServerLogInput>;
   const category = isMember(categories, untrusted.category)
@@ -154,6 +222,7 @@ export function createServerLogEvent(input: ServerLogInput): ServerLogEvent {
     : undefined;
   const durationMs = safeDuration(untrusted.durationMs);
   const supabaseDiagnostic = untrusted.supabaseDiagnostic;
+  const recordingUploadDiagnostic = untrusted.recordingUploadDiagnostic;
 
   return {
     timestamp: new Date().toISOString(),
@@ -188,6 +257,29 @@ export function createServerLogEvent(input: ServerLogInput): ServerLogEvent {
               : {}),
             authenticatedUserPresent:
               supabaseDiagnostic.authenticatedUserPresent,
+          },
+        }
+      : {}),
+    ...(recordingUploadDiagnostic &&
+    isMember(recordingUploadStages, recordingUploadDiagnostic.stage) &&
+    isMember(
+      recordingUploadErrorCategories,
+      recordingUploadDiagnostic.errorCategory,
+    ) &&
+    typeof recordingUploadDiagnostic.authenticatedUserPresent === "boolean"
+      ? {
+          recordingUploadDiagnostic: {
+            stage: recordingUploadDiagnostic.stage,
+            errorCategory: recordingUploadDiagnostic.errorCategory,
+            ...(safeUploadErrorCode(recordingUploadDiagnostic.errorCode)
+              ? {
+                  errorCode: safeUploadErrorCode(
+                    recordingUploadDiagnostic.errorCode,
+                  ),
+                }
+              : {}),
+            authenticatedUserPresent:
+              recordingUploadDiagnostic.authenticatedUserPresent,
           },
         }
       : {}),

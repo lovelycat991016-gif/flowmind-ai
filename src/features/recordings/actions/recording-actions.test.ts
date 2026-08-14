@@ -4,12 +4,28 @@ const mocks = vi.hoisted(() => ({
   createClient: vi.fn(),
   randomUUID: vi.fn(),
   redirect: vi.fn(),
+  reportServerEvent: vi.fn(),
+  createRecordingUploadDiagnostic: vi.fn((input) => input),
+  recordingUploadErrorCode: vi.fn((error) =>
+    error && typeof error === "object"
+      ? "code" in error
+        ? error.code
+        : "statusCode" in error
+          ? error.statusCode
+          : undefined
+      : undefined,
+  ),
 }));
 
 vi.mock("@/shared/lib/supabase/server", () => ({
   createClient: mocks.createClient,
 }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
+vi.mock("@/shared/observability/server", () => ({
+  createRecordingUploadDiagnostic: mocks.createRecordingUploadDiagnostic,
+  recordingUploadErrorCode: mocks.recordingUploadErrorCode,
+  reportServerEvent: mocks.reportServerEvent,
+}));
 
 import { cancelUpload } from "./cancel-upload";
 import { createUploadIntent } from "./create-upload-intent";
@@ -39,8 +55,24 @@ function authenticatedClient() {
   return client;
 }
 
-function singleResult(data: unknown, error: { message: string } | null = null) {
+function singleResult(
+  data: unknown,
+  error: { message: string; code?: string; statusCode?: string } | null = null,
+) {
   return vi.fn().mockResolvedValue({ data, error });
+}
+
+function expectUploadDiagnostic(
+  stage: string,
+  errorCategory: string,
+  errorCode?: string,
+) {
+  expect(mocks.createRecordingUploadDiagnostic).toHaveBeenCalledWith({
+    stage,
+    errorCategory,
+    ...(errorCode ? { errorCode } : {}),
+    authenticatedUserPresent: true,
+  });
 }
 
 beforeEach(() => {
@@ -77,6 +109,98 @@ describe("recording upload actions", () => {
     });
     expect(client.from).toHaveBeenCalledWith("meetings");
     expect(meetingQuery.eq).toHaveBeenCalledWith("user_id", userId);
+    expectUploadDiagnostic("intent_meeting_lookup", "supabase_query");
+  });
+
+  it("records a safe recording insert diagnostic", async () => {
+    const client = authenticatedClient();
+    const meetingQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({ id: meetingId }),
+    };
+    const insertQuery = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnValue({
+        single: singleResult(null, { message: "token=private", code: "42501" }),
+      }),
+    };
+    client.from.mockImplementation((table: string) =>
+      table === "meetings" ? meetingQuery : insertQuery,
+    );
+
+    await expect(createUploadIntent(metadata)).resolves.toMatchObject({
+      status: "error",
+    });
+    expectUploadDiagnostic("intent_recording_insert", "supabase_mutation", "42501");
+  });
+
+  it("records a safe signed upload URL diagnostic", async () => {
+    const client = authenticatedClient();
+    const meetingQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({ id: meetingId }),
+    };
+    const insertQuery = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnValue({ single: singleResult({ id: recordingId }) }),
+    };
+    const failedUpdate = { update: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+    let recordingCalls = 0;
+    client.from.mockImplementation((table: string) => {
+      if (table === "meetings") return meetingQuery;
+      recordingCalls += 1;
+      return recordingCalls === 1 ? insertQuery : failedUpdate;
+    });
+    client.storage.from.mockReturnValue({
+      createSignedUploadUrl: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "Authorization: private", statusCode: "403" },
+      }),
+    });
+
+    await expect(createUploadIntent(metadata)).resolves.toMatchObject({
+      status: "error",
+    });
+    expectUploadDiagnostic("intent_signed_url", "storage", "403");
+  });
+
+  it("records a safe uploading status transition diagnostic", async () => {
+    const client = authenticatedClient();
+    const meetingQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({ id: meetingId }),
+    };
+    const insertQuery = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnValue({ single: singleResult({ id: recordingId }) }),
+    };
+    const transitionQuery = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+    };
+    let recordingCalls = 0;
+    client.from.mockImplementation((table: string) => {
+      if (table === "meetings") return meetingQuery;
+      recordingCalls += 1;
+      return recordingCalls === 1 ? insertQuery : transitionQuery;
+    });
+    client.storage.from.mockReturnValue({
+      createSignedUploadUrl: vi.fn().mockResolvedValue({
+        data: { signedUrl: "https://storage.example/upload" },
+        error: null,
+      }),
+    });
+    transitionQuery.eq.mockReturnValueOnce(transitionQuery).mockResolvedValueOnce({
+      error: { message: "private", code: "42501" },
+    });
+
+    await expect(createUploadIntent(metadata)).resolves.toMatchObject({
+      status: "error",
+    });
+    expectUploadDiagnostic("intent_status_update", "supabase_mutation", "42501");
   });
 
   it("creates a pending row and returns an SDK signed upload URL", async () => {
@@ -282,6 +406,71 @@ describe("recording upload actions", () => {
       status: "error",
       message: recordingUploadActionError,
     });
+    expectUploadDiagnostic("finalize_processing_job", "supabase_mutation");
+  });
+
+  it("records a safe Storage list diagnostic", async () => {
+    const client = authenticatedClient();
+    const recordingQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({
+        id: recordingId,
+        storage_bucket: "recordings",
+        storage_path: `${userId}/${meetingId}/${recordingId}.webm`,
+        status: "uploading",
+      }),
+    };
+    const failedUpdate = { update: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+    client.from.mockImplementation(() =>
+      client.from.mock.calls.length === 1 ? recordingQuery : failedUpdate,
+    );
+    client.storage.from.mockReturnValue({
+      list: vi.fn().mockResolvedValue({
+        data: null,
+        error: { message: "Bearer private", statusCode: "403" },
+      }),
+    });
+
+    await expect(finalizeUpload({ recordingId })).resolves.toMatchObject({
+      status: "error",
+    });
+    expectUploadDiagnostic("finalize_storage_list", "storage", "403");
+  });
+
+  it("records a safe recording update diagnostic", async () => {
+    const client = authenticatedClient();
+    const recordingQuery = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: singleResult({
+        id: recordingId,
+        storage_bucket: "recordings",
+        storage_path: `${userId}/${meetingId}/${recordingId}.webm`,
+        status: "uploading",
+      }),
+    };
+    const updateQuery = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnValue({
+        single: singleResult(null, { message: "cookie=private", code: "42501" }),
+      }),
+    };
+    client.from.mockImplementation(() =>
+      client.from.mock.calls.length === 1 ? recordingQuery : updateQuery,
+    );
+    client.storage.from.mockReturnValue({
+      list: vi.fn().mockResolvedValue({
+        data: [{ name: `${recordingId}.webm` }],
+        error: null,
+      }),
+    });
+
+    await expect(finalizeUpload({ recordingId })).resolves.toMatchObject({
+      status: "error",
+    });
+    expectUploadDiagnostic("finalize_recording_update", "supabase_mutation", "42501");
   });
 
   it("returns a safe error when the expected object is missing", async () => {
@@ -326,6 +515,7 @@ describe("recording upload actions", () => {
       status: "error",
     });
     expect(client.storage.from).not.toHaveBeenCalled();
+    expectUploadDiagnostic("finalize_recording_lookup", "supabase_query");
   });
 
   it("cancels only a pending or uploading owner-visible recording", async () => {

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { cancelUpload } from "@/features/recordings/actions/cancel-upload";
 import { createUploadIntent } from "@/features/recordings/actions/create-upload-intent";
 import { finalizeUpload } from "@/features/recordings/actions/finalize-upload";
+import { reportRecordingUploadFailure } from "@/features/recordings/actions/report-recording-upload-failure";
 import {
   MAX_RECORDING_FILE_SIZE_BYTES,
   recordingMimeTypes,
@@ -17,6 +18,30 @@ import { Label } from "@/shared/ui/label";
 import { zhCN } from "@/shared/i18n/zh-CN";
 
 type UploadPhase = "idle" | "uploading" | "success" | "error" | "cancelled";
+type UploadFailure =
+  | { errorCategory: "network" }
+  | {
+      errorCategory:
+        | "http_401"
+        | "http_403"
+        | "http_404"
+        | "http_409"
+        | "http_413"
+        | "other_http";
+      errorCode: string;
+    };
+
+function uploadFailureForStatus(status: number): UploadFailure {
+  const errorCategory =
+    ({
+      401: "http_401",
+      403: "http_403",
+      404: "http_404",
+      409: "http_409",
+      413: "http_413",
+    } as const)[status] ?? "other_http";
+  return { errorCategory, errorCode: String(status) };
+}
 
 function uploadToSignedUrl(
   signedUrl: string,
@@ -50,11 +75,11 @@ function uploadToSignedUrl(
         return;
       }
       cleanUp();
-      reject(new Error("Upload failed"));
+      reject(uploadFailureForStatus(request.status));
     };
     request.onerror = () => {
       cleanUp();
-      reject(new Error("Upload failed"));
+      reject({ errorCategory: "network" } satisfies UploadFailure);
     };
     request.onabort = () => {
       cleanUp();
@@ -131,7 +156,7 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
         requestRef,
         abortController.signal,
       );
-    } catch {
+    } catch (error) {
       if (cancelledRef.current || abortController.signal.aborted) {
         if (
           abortControllerRef.current &&
@@ -142,6 +167,9 @@ export function RecordingUploadForm({ meetingId }: { meetingId: string }) {
         setError(null);
         setPhase("cancelled");
         return;
+      }
+      if (error && typeof error === "object" && "errorCategory" in error) {
+        void reportRecordingUploadFailure(error as UploadFailure);
       }
       setError(zhCN.recordings.uploadFailed);
       setPhase("error");

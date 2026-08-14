@@ -4,6 +4,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { recordingLifecycleTransitionSchema } from "@/features/recordings/schemas/recording-input";
+import {
+  createRecordingUploadDiagnostic,
+  recordingUploadErrorCode,
+  reportServerEvent,
+  type RecordingUploadErrorCategory,
+  type RecordingUploadStage,
+} from "@/shared/observability/server";
 import { createClient } from "@/shared/lib/supabase/server";
 
 import {
@@ -12,6 +19,33 @@ import {
 } from "./recording-action-state";
 
 const recordingIdSchema = z.object({ recordingId: z.uuid() });
+
+function reportUploadFinalizeFailure(input: {
+  stage: RecordingUploadStage;
+  errorCategory: RecordingUploadErrorCategory;
+  error?: unknown;
+  authenticatedUserPresent: boolean;
+}) {
+  reportServerEvent({
+    category: input.errorCategory === "storage" ? "storage" : "supabase",
+    operation: "recording_upload_finalize",
+    outcome: "failure",
+    failureCode:
+      input.errorCategory === "storage"
+        ? "storage_operation_failed"
+        : input.errorCategory === "supabase_query"
+          ? "supabase_query_failed"
+          : "supabase_mutation_failed",
+    recordingUploadDiagnostic: createRecordingUploadDiagnostic({
+      stage: input.stage,
+      errorCategory: input.errorCategory,
+      ...(recordingUploadErrorCode(input.error)
+        ? { errorCode: recordingUploadErrorCode(input.error) }
+        : {}),
+      authenticatedUserPresent: input.authenticatedUserPresent,
+    }),
+  });
+}
 
 function storageLocation(path: string) {
   const separator = path.lastIndexOf("/");
@@ -25,7 +59,7 @@ async function ensureProcessingJob(
   supabase: Awaited<ReturnType<typeof createClient>>,
   recordingId: string,
   userId: string,
-) {
+): Promise<{ success: boolean; error?: unknown }> {
   const { data: activeJob, error: activeJobError } = await supabase
     .from("processing_jobs")
     .select("id")
@@ -33,8 +67,8 @@ async function ensureProcessingJob(
     .eq("user_id", userId)
     .in("status", ["queued", "running"])
     .maybeSingle();
-  if (activeJobError) return false;
-  if (activeJob) return true;
+  if (activeJobError) return { success: false, error: activeJobError };
+  if (activeJob) return { success: true };
 
   const { data: createdJob, error: createJobError } = await supabase
     .from("processing_jobs")
@@ -47,7 +81,10 @@ async function ensureProcessingJob(
     .select("id")
     .single();
 
-  return !createJobError && Boolean(createdJob);
+  return {
+    success: !createJobError && Boolean(createdJob),
+    ...(createJobError ? { error: createJobError } : {}),
+  };
 }
 
 export async function finalizeUpload(
@@ -73,6 +110,12 @@ export async function finalizeUpload(
     .eq("meetings.user_id", user.id)
     .maybeSingle();
   if (recordingError || !recording) {
+    reportUploadFinalizeFailure({
+      stage: "finalize_recording_lookup",
+      errorCategory: "supabase_query",
+      error: recordingError,
+      authenticatedUserPresent: Boolean(user),
+    });
     return { status: "error", message: recordingUploadActionError };
   }
 
@@ -93,6 +136,12 @@ export async function finalizeUpload(
       (object) => object.name === location.name,
     );
     if (objectError || !objectExists) {
+      reportUploadFinalizeFailure({
+        stage: "finalize_storage_list",
+        errorCategory: "storage",
+        error: objectError,
+        authenticatedUserPresent: Boolean(user),
+      });
       await supabase
         .from("recordings")
         .update({ status: "failed" })
@@ -109,16 +158,28 @@ export async function finalizeUpload(
       .select("id")
       .single();
     if (updateError || !updated) {
+      reportUploadFinalizeFailure({
+        stage: "finalize_recording_update",
+        errorCategory: "supabase_mutation",
+        error: updateError,
+        authenticatedUserPresent: Boolean(user),
+      });
       return { status: "error", message: recordingUploadActionError };
     }
   }
 
-  const processingJobCreated = await ensureProcessingJob(
+  const processingJob = await ensureProcessingJob(
     supabase,
     recording.id,
     user.id,
   );
-  if (!processingJobCreated) {
+  if (!processingJob.success) {
+    reportUploadFinalizeFailure({
+      stage: "finalize_processing_job",
+      errorCategory: "supabase_mutation",
+      error: processingJob.error,
+      authenticatedUserPresent: Boolean(user),
+    });
     return { status: "error", message: recordingUploadActionError };
   }
 
