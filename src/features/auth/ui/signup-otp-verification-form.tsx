@@ -62,9 +62,9 @@ export function SignupOtpVerificationForm({
             autoComplete="one-time-code"
             id="token"
             inputMode="numeric"
-            maxLength={6}
+            maxLength={8}
             name="token"
-            pattern="[0-9]{6}"
+            pattern="[0-9]{8}"
             required
           />
         </div>

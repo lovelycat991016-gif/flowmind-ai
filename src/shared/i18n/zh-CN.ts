@@ -412,7 +412,7 @@ export const zhCN = {
     otpCodeSent: "如果该邮箱可用，我们已发送验证码。",
     otpVerified: "验证码验证成功。",
     verifyEmail: "验证邮箱",
-    verifyEmailDescription: "请输入发送到邮箱的六位验证码。",
+    verifyEmailDescription: "请输入发送到邮箱的八位验证码。",
     resendVerificationCode: "重新发送验证码",
     invalidCredentials: "邮箱或密码不正确。",
     emailUnconfirmed: "请先验证邮箱后再登录。",

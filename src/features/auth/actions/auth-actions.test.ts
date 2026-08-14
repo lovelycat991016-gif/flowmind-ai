@@ -84,7 +84,7 @@ describe("signup email OTP actions", () => {
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 
-  it("verifies a signup OTP", async () => {
+  it("verifies an eight-digit signup OTP", async () => {
     const verifyOtp = vi.fn().mockResolvedValue({ error: null });
     mocks.createClient.mockResolvedValue({ auth: { verifyOtp } });
 
@@ -96,14 +96,14 @@ describe("signup email OTP actions", () => {
         { status: "idle", message: "" },
         formData({
           email: "user@example.com",
-          token: "123456",
+          token: "12345678",
           next: "/meetings",
         }),
       ),
     ).rejects.toThrow("NEXT_REDIRECT");
     expect(verifyOtp).toHaveBeenCalledWith({
       email: "user@example.com",
-      token: "123456",
+      token: "12345678",
       type: "signup",
     });
     expect(mocks.redirect).toHaveBeenCalledWith("/meetings");
@@ -153,14 +153,14 @@ describe("signup email OTP actions", () => {
     ).resolves.toEqual({ status: "error", message: zhCN.auth.otpRateLimited });
   });
 
-  it("rejects invalid OTP input before calling Supabase", async () => {
+  it("rejects a six-digit OTP before calling Supabase", async () => {
     const verifyOtp = vi.fn();
     mocks.createClient.mockResolvedValue({ auth: { verifyOtp } });
 
     await expect(
       verifySignupEmailOtpAction(
         { status: "idle", message: "" },
-        formData({ email: "user@example.com", token: "12345" }),
+        formData({ email: "user@example.com", token: "123456" }),
       ),
     ).resolves.toEqual({ status: "error", message: zhCN.auth.otpCodeInvalid });
     expect(verifyOtp).not.toHaveBeenCalled();

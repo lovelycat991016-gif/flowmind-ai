@@ -16,16 +16,16 @@ describe("email OTP schemas", () => {
     ).toBe("user@example.com");
   });
 
-  it("accepts exactly six ASCII digits for OTP verification", () => {
+  it("accepts exactly eight ASCII digits for OTP verification", () => {
     expect(
       emailOtpVerificationSchema.parse({
         email: "user@example.com",
-        token: "123456",
+        token: "12345678",
       }).token,
-    ).toBe("123456");
+    ).toBe("12345678");
   });
 
-  it.each(["", "12345", "1234567", "１２３４５６", "12 456", "abcdef"])(
+  it.each(["", "12345", "123456", "1234567", "123456789", "１２３４５６", "12 456", "abcdef"])(
     "rejects an invalid OTP token %s",
     (token) => {
       expect(

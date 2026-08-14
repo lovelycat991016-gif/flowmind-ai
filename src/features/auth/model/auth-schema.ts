@@ -22,7 +22,7 @@ const otpTokenSchema = z
   .string()
   .trim()
   .min(1, zhCN.auth.otpCodeRequired)
-  .regex(/^\d{6}$/, zhCN.auth.otpCodeInvalid);
+  .regex(/^\d{8}$/, zhCN.auth.otpCodeInvalid);
 
 export const emailOtpRequestSchema = z.object({ email: emailSchema });
 
