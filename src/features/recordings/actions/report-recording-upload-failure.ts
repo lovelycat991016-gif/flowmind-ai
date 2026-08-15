@@ -1,28 +1,14 @@
 "use server";
 
-import { z } from "zod";
-
+import { recordingUploadFailureSchema } from "@/features/recordings/model/recording-upload-diagnostic-schema";
 import {
   createRecordingUploadDiagnostic,
   reportServerEvent,
 } from "@/shared/observability/server";
 import { createClient } from "@/shared/lib/supabase/server";
 
-const inputSchema = z.object({
-  errorCategory: z.enum([
-    "network",
-    "http_401",
-    "http_403",
-    "http_404",
-    "http_409",
-    "http_413",
-    "other_http",
-  ]),
-  errorCode: z.string().regex(/^\d{3}$/).optional(),
-});
-
 export async function reportRecordingUploadFailure(input: unknown) {
-  const parsed = inputSchema.safeParse(input);
+  const parsed = recordingUploadFailureSchema.safeParse(input);
   if (!parsed.success) return;
 
   let authenticatedUserPresent = false;
