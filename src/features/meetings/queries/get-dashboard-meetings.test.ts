@@ -3,12 +3,13 @@ import { afterEach, expect, it, vi } from "vitest";
 const { createClientMock, createSupabaseErrorDiagnosticMock, reportServerEventMock } = vi.hoisted(() => ({
   createClientMock: vi.fn(),
   createSupabaseErrorDiagnosticMock: vi.fn(
-    ({ table, query, error, authenticatedUserPresent }) => ({
+    ({ table, query, error, status, authenticatedUserPresent }) => ({
       table,
       query,
       errorCode: error?.code,
       errorMessageSummary:
         error?.code === "42P01" ? "relation_not_found" : "request_failed",
+      requestErrorCategory: status === 503 ? "http_503" : "unknown",
       authenticatedUserPresent,
     }),
   ),
@@ -124,7 +125,7 @@ it("reports a safe structured event for a failing Supabase query", async () => {
     message: 'relation "meetings" does not exist',
   };
   const failed = {
-    select: vi.fn().mockResolvedValue({ count: null, error }),
+    select: vi.fn().mockResolvedValue({ count: null, error, status: 503 }),
   };
   const query = countQuery(0);
   const recent = {
@@ -162,7 +163,15 @@ it("reports a safe structured event for a failing Supabase query", async () => {
       query: "meetings_total",
       errorCode: "42P01",
       errorMessageSummary: "relation_not_found",
+      requestErrorCategory: "http_503",
       authenticatedUserPresent: true,
     },
   }));
+  expect(createSupabaseErrorDiagnosticMock).toHaveBeenCalledWith(
+    expect.objectContaining({
+      table: "meetings",
+      query: "meetings_total",
+      status: 503,
+    }),
+  );
 });

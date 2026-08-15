@@ -49,6 +49,19 @@ const dashboardQueries = [
   "intelligence_recent",
 ] as const;
 
+const supabaseRequestErrorCategories = [
+  "network",
+  "timeout",
+  "http_401",
+  "http_403",
+  "http_429",
+  "http_500",
+  "http_502",
+  "http_503",
+  "other_http",
+  "unknown",
+] as const;
+
 const recordingUploadStages = [
   "intent_meeting_lookup",
   "intent_recording_insert",
@@ -79,6 +92,8 @@ export type ServerLogOperation = (typeof operations)[number];
 export type ServerLogFailureCode = (typeof failureCodes)[number];
 export type DashboardTable = (typeof dashboardTables)[number];
 export type DashboardQuery = (typeof dashboardQueries)[number];
+export type SupabaseRequestErrorCategory =
+  (typeof supabaseRequestErrorCategories)[number];
 export type RecordingUploadStage = (typeof recordingUploadStages)[number];
 export type RecordingUploadErrorCategory =
   (typeof recordingUploadErrorCategories)[number];
@@ -92,6 +107,7 @@ export type SupabaseErrorDiagnostic = {
     | "relation_not_found"
     | "column_not_found"
     | "request_failed";
+  requestErrorCategory?: SupabaseRequestErrorCategory;
   authenticatedUserPresent: boolean;
 };
 
@@ -158,10 +174,32 @@ function safeErrorMessageSummary(code: string | undefined) {
   return "request_failed" as const;
 }
 
+function supabaseRequestErrorCategory(
+  status: unknown,
+): SupabaseRequestErrorCategory {
+  if (typeof status !== "number" || !Number.isInteger(status)) {
+    return "unknown";
+  }
+  if (status === 0) return "network";
+  if (status < 400 || status > 599) return "unknown";
+
+  return (
+    ({
+      401: "http_401",
+      403: "http_403",
+      429: "http_429",
+      500: "http_500",
+      502: "http_502",
+      503: "http_503",
+    } as const)[status] ?? "other_http"
+  );
+}
+
 export function createSupabaseErrorDiagnostic(input: {
   table: DashboardTable;
   query: DashboardQuery;
   error: unknown;
+  status?: unknown;
   authenticatedUserPresent: boolean;
 }): SupabaseErrorDiagnostic {
   const code =
@@ -176,6 +214,7 @@ export function createSupabaseErrorDiagnostic(input: {
     query: input.query,
     ...(code ? { errorCode: code } : {}),
     errorMessageSummary: safeErrorMessageSummary(code),
+    requestErrorCategory: supabaseRequestErrorCategory(input.status),
     authenticatedUserPresent: input.authenticatedUserPresent,
   };
 }
@@ -253,6 +292,15 @@ export function createServerLogEvent(input: ServerLogInput): ServerLogEvent {
               ? {
                   errorMessageSummary:
                     supabaseDiagnostic.errorMessageSummary,
+                }
+              : {}),
+            ...(isMember(
+              supabaseRequestErrorCategories,
+              supabaseDiagnostic.requestErrorCategory,
+            )
+              ? {
+                  requestErrorCategory:
+                    supabaseDiagnostic.requestErrorCategory,
                 }
               : {}),
             authenticatedUserPresent:

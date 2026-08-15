@@ -76,10 +76,60 @@ describe("server observability", () => {
       query: "meetings_total",
       errorCode: "42501",
       errorMessageSummary: "permission_denied",
+      requestErrorCategory: "unknown",
       authenticatedUserPresent: true,
     });
     expect(JSON.stringify(event)).not.toMatch(
       /private-token|Authorization|Bearer|permission denied for table meetings/,
+    );
+  });
+
+  it.each([
+    [401, "http_401"],
+    [403, "http_403"],
+    [429, "http_429"],
+    [500, "http_500"],
+    [502, "http_502"],
+    [503, "http_503"],
+    [418, "other_http"],
+    [0, "network"],
+    [undefined, "unknown"],
+    [null, "unknown"],
+    [-1, "unknown"],
+    [401.5, "unknown"],
+    [600, "unknown"],
+  ] as const)("classifies a Supabase response status %s as %s", (status, requestErrorCategory) => {
+    const diagnostic = createSupabaseErrorDiagnostic({
+      table: "meetings",
+      query: "meetings_total",
+      error: {
+        code: "",
+        message:
+          "Authorization: Bearer private-token https://supabase.example/rest/v1/meetings",
+        details: "private response body cookie=session-cookie user=owner-id",
+        hint: "private SQL hint JWT=private-jwt",
+      },
+      ...(status === undefined ? {} : { status }),
+      authenticatedUserPresent: true,
+    });
+    const event = createServerLogEvent({
+      category: "supabase",
+      operation: "dashboard_meeting_query",
+      outcome: "failure",
+      failureCode: "supabase_query_failed",
+      supabaseDiagnostic: diagnostic,
+    });
+
+    expect(event.supabaseDiagnostic).toEqual(
+      expect.objectContaining({
+        table: "meetings",
+        query: "meetings_total",
+        requestErrorCategory,
+        authenticatedUserPresent: true,
+      }),
+    );
+    expect(JSON.stringify(event)).not.toMatch(
+      /Authorization|Bearer|private-token|supabase\.example|response body|cookie|owner-id|SQL hint|JWT|private-jwt/,
     );
   });
 

@@ -28,7 +28,12 @@ function startOfUtcWeek(now: Date) {
 
 async function reportDashboardQueryFailures(input: {
   supabase: Awaited<ReturnType<typeof createClient>>;
-  failures: Array<{ table: DashboardTable; query: DashboardQuery; error: unknown }>;
+  failures: Array<{
+    table: DashboardTable;
+    query: DashboardQuery;
+    error: unknown;
+    status: unknown;
+  }>;
   startedAt: number;
 }) {
   let authenticatedUserPresent = false;
@@ -100,17 +105,18 @@ export async function getDashboardMeetingData(): Promise<DashboardMeetingData> {
     ]);
 
   const failures = [
-    { table: "meetings", query: "meetings_total", error: total.error },
-    { table: "meetings", query: "meetings_active", error: active.error },
-    { table: "meetings", query: "meetings_archived", error: archived.error },
-    { table: "meetings", query: "meetings_this_week", error: thisWeek.error },
-    { table: "meetings", query: "meetings_recent", error: recent.error },
-    { table: "action_items", query: "action_items_open", error: openTasks.error },
-    { table: "action_items", query: "action_items_completed", error: completedTasks.error },
+    { table: "meetings", query: "meetings_total", error: total.error, status: total.status },
+    { table: "meetings", query: "meetings_active", error: active.error, status: active.status },
+    { table: "meetings", query: "meetings_archived", error: archived.error, status: archived.status },
+    { table: "meetings", query: "meetings_this_week", error: thisWeek.error, status: thisWeek.status },
+    { table: "meetings", query: "meetings_recent", error: recent.error, status: recent.status },
+    { table: "action_items", query: "action_items_open", error: openTasks.error, status: openTasks.status },
+    { table: "action_items", query: "action_items_completed", error: completedTasks.error, status: completedTasks.status },
   ].filter((failure) => Boolean(failure.error)) as Array<{
     table: DashboardTable;
     query: DashboardQuery;
     error: unknown;
+    status: unknown;
   }>;
   if (failures.length > 0) {
     await reportDashboardQueryFailures({ supabase, failures, startedAt });
