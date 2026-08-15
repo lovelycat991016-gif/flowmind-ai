@@ -26,10 +26,8 @@ vi.mock(
   }),
 );
 
-import {
-  INITIAL_MEETING_COPILOT_ACTION_STATE,
-  sendMeetingCopilotMessageAction,
-} from "./send-meeting-copilot-message";
+import { INITIAL_MEETING_COPILOT_ACTION_STATE } from "./meeting-copilot-action-state";
+import { sendMeetingCopilotMessageAction } from "./send-meeting-copilot-message";
 
 const meetingId = "6b79f5f3-f083-4a75-b74b-41342f2b1454";
 

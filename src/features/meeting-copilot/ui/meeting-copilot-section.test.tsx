@@ -5,11 +5,6 @@ vi.mock(
   "@/features/meeting-copilot/actions/send-meeting-copilot-message",
   () => ({
     sendMeetingCopilotMessageAction: vi.fn(),
-    INITIAL_MEETING_COPILOT_ACTION_STATE: {
-      status: "idle",
-      message: "",
-      value: "",
-    },
   }),
 );
 

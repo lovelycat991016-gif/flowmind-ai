@@ -3,11 +3,11 @@
 import { useActionState } from "react";
 
 import type { MeetingAiMessage } from "@/entities/meeting-ai-message/model/meeting-ai-message";
+import { sendMeetingCopilotMessageAction } from "@/features/meeting-copilot/actions/send-meeting-copilot-message";
 import {
   INITIAL_MEETING_COPILOT_ACTION_STATE,
-  sendMeetingCopilotMessageAction,
   type MeetingCopilotActionState,
-} from "@/features/meeting-copilot/actions/send-meeting-copilot-message";
+} from "@/features/meeting-copilot/actions/meeting-copilot-action-state";
 import { zhCN } from "@/shared/i18n/zh-CN";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";

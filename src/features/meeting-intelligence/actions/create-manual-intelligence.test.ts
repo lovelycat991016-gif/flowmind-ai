@@ -12,10 +12,8 @@ vi.mock("@/shared/lib/supabase/server", () => ({
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
-import {
-  INITIAL_MANUAL_INTELLIGENCE_ACTION_STATE,
-  createManualIntelligenceAction,
-} from "./create-manual-intelligence";
+import { INITIAL_MANUAL_INTELLIGENCE_ACTION_STATE } from "./manual-intelligence-action-state";
+import { createManualIntelligenceAction } from "./create-manual-intelligence";
 
 const meetingId = "6b79f5f3-f083-4a75-b74b-41342f2b1454";
 

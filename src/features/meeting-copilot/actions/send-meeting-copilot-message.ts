@@ -4,25 +4,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createMeetingCopilotProvider } from "@/features/ai-providers/factory/create-meeting-copilot-provider";
-import { buildMeetingCopilotContext, retrieveMeetingCopilotSources, type MeetingCopilotSource } from "@/features/meeting-copilot/context/build-meeting-copilot-context";
+import {
+  buildMeetingCopilotContext,
+  retrieveMeetingCopilotSources,
+  type MeetingCopilotSource,
+} from "@/features/meeting-copilot/context/build-meeting-copilot-context";
 import { recordServerAiUsageEvent } from "@/features/ai-usage/record-ai-usage-event";
 import type { MeetingCopilotProvider } from "@/features/meeting-copilot/providers/meeting-copilot-provider";
 import { meetingCopilotPromptSchema } from "@/features/meeting-copilot/schemas/meeting-copilot-input";
 import { zhCN } from "@/shared/i18n/zh-CN";
 import { createClient } from "@/shared/lib/supabase/server";
 
-export type MeetingCopilotActionState = {
-  status: "idle" | "error" | "success";
-  message: string;
-  value: string;
-  sources?: MeetingCopilotSource[];
-};
-
-export const INITIAL_MEETING_COPILOT_ACTION_STATE: MeetingCopilotActionState = {
-  status: "idle",
-  message: "",
-  value: "",
-};
+import type { MeetingCopilotActionState } from "./meeting-copilot-action-state";
 
 export async function sendMeetingCopilotMessageAction(
   _previous: MeetingCopilotActionState,

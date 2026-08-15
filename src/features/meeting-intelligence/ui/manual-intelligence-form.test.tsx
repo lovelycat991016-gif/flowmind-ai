@@ -5,11 +5,6 @@ vi.mock(
   "@/features/meeting-intelligence/actions/create-manual-intelligence",
   () => ({
     createManualIntelligenceAction: vi.fn(),
-    INITIAL_MANUAL_INTELLIGENCE_ACTION_STATE: {
-      status: "idle",
-      message: "",
-      value: "",
-    },
   }),
 );
 

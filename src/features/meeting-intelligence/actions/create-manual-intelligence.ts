@@ -7,18 +7,7 @@ import { manualIntelligenceInputSchema } from "@/features/meeting-intelligence/s
 import { zhCN } from "@/shared/i18n/zh-CN";
 import { createClient } from "@/shared/lib/supabase/server";
 
-export type ManualIntelligenceActionState = {
-  status: "idle" | "error" | "success";
-  message: string;
-  value: string;
-};
-
-export const INITIAL_MANUAL_INTELLIGENCE_ACTION_STATE: ManualIntelligenceActionState =
-  {
-    status: "idle",
-    message: "",
-    value: "",
-  };
+import type { ManualIntelligenceActionState } from "./manual-intelligence-action-state";
 
 export async function createManualIntelligenceAction(
   _previous: ManualIntelligenceActionState,

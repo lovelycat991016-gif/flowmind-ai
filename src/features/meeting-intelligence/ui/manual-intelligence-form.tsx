@@ -2,11 +2,11 @@
 
 import { useActionState } from "react";
 
+import { createManualIntelligenceAction } from "@/features/meeting-intelligence/actions/create-manual-intelligence";
 import {
-  createManualIntelligenceAction,
   INITIAL_MANUAL_INTELLIGENCE_ACTION_STATE,
   type ManualIntelligenceActionState,
-} from "@/features/meeting-intelligence/actions/create-manual-intelligence";
+} from "@/features/meeting-intelligence/actions/manual-intelligence-action-state";
 import { zhCN } from "@/shared/i18n/zh-CN";
 import { Button } from "@/shared/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
