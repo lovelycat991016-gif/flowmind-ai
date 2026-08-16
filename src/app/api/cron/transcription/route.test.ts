@@ -47,4 +47,31 @@ describe("transcription cron route", () => {
       expect.objectContaining({ provider: { provider: true } }),
     );
   });
+
+  it("logs a safe cron diagnostic while preserving the generic 500 response", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.authorize.mockReturnValue(true);
+    mocks.createProvider.mockReturnValue({ provider: true });
+    mocks.execute.mockRejectedValue(
+      new Error("provider request failed with Bearer secret-token"),
+    );
+
+    const response = await GET(
+      new Request("http://localhost/api/cron/transcription", {
+        headers: { Authorization: "Bearer cron" },
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      error: "Unable to process transcription.",
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "TRANSCRIPTION_CRON_FAILED",
+      expect.objectContaining({
+        error: expect.objectContaining({ name: "Error" }),
+      }),
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-token");
+  });
 });

@@ -184,7 +184,31 @@ describe("executeNextTranscriptionJob", () => {
     expect(provider.transcribe).not.toHaveBeenCalled();
   });
 
+  it("logs a safe claim diagnostic while preserving the generic rejection", async () => {
+    const error = new Error("claim request failed with token=secret-value");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.claimNextProcessingJob.mockRejectedValue(error);
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+      }),
+    ).rejects.toThrow("Unable to execute transcription job.");
+
+    expect(consoleError).toHaveBeenCalledWith(
+      "CLAIM_TRANSCRIPTION_JOB_FAILED",
+      expect.objectContaining({
+        error: expect.objectContaining({ name: "Error" }),
+      }),
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-value");
+  });
+
   it("records a safe provider failure for the claimed job without exposing provider detail", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.claimNextProcessingJob.mockResolvedValue(job);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
     provider.transcribe.mockRejectedValue(
@@ -209,9 +233,17 @@ describe("executeNextTranscriptionJob", () => {
       code: "provider_rate_limited",
     });
     expect(mocks.completeTranscriptionJob).not.toHaveBeenCalled();
+    expect(consoleError).toHaveBeenCalledWith(
+      "TRANSCRIPTION_WORKER_FAILED",
+      expect.objectContaining({
+        jobId: job.id,
+        failureCode: "provider_rate_limited",
+      }),
+    );
   });
 
   it("returns a generic error when failure persistence cannot release a claimed job", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.claimNextProcessingJob.mockResolvedValue(job);
     mocks.getRecordingAudioForClaimedJob.mockRejectedValue(
       new Error("unexpected storage implementation detail"),
@@ -228,5 +260,12 @@ describe("executeNextTranscriptionJob", () => {
         provider,
       }),
     ).rejects.toThrow("Unable to execute transcription job.");
+    expect(consoleError).toHaveBeenCalledWith(
+      "FAIL_TRANSCRIPTION_JOB_PERSIST_FAILED",
+      expect.objectContaining({ jobId: job.id }),
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+      "unsafe database implementation detail",
+    );
   });
 });

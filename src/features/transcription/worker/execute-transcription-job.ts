@@ -25,6 +25,27 @@ const executionInputSchema = z.object({
   maxInputBytes: z.number().int().positive(),
 });
 
+function safeErrorDiagnostic(error: unknown) {
+  if (!(error instanceof Error)) return { type: typeof error };
+
+  const redactedMessage = error.message
+    .replace(/https?:\/\/\S+/gi, "[redacted-url]")
+    .replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [redacted]")
+    .replace(
+      /\b(?:token|access[_ -]?key(?:id|secret)?|secret|authorization|cookie|signature)\b\s*(?:=|:)\s*[^\s,;]+/gi,
+      (value) => `${value.split(/(?:=|:)/)[0]}=[redacted]`,
+    )
+    .slice(0, 500);
+  const message =
+    /^(?:Unable to |(?:Worker|OpenAI|FlowMind|Transcription provider) environment configuration is invalid\.)/.test(
+      redactedMessage,
+    )
+      ? redactedMessage
+      : "untrusted_error_message";
+
+  return { name: error.name.slice(0, 100), message };
+}
+
 function getSafeFailureCode(error: unknown): TranscriptionFailureCode {
   if (
     error &&
@@ -60,7 +81,10 @@ export async function executeNextTranscriptionJob(input: {
       workerId: invocationToken,
       leaseSeconds: parsed.data.leaseSeconds,
     });
-  } catch {
+  } catch (error) {
+    console.error("CLAIM_TRANSCRIPTION_JOB_FAILED", {
+      error: safeErrorDiagnostic(error),
+    });
     throw new Error("Unable to execute transcription job.");
   }
 
@@ -108,13 +132,22 @@ export async function executeNextTranscriptionJob(input: {
     return { status: "completed" as const, jobId: job.id };
   } catch (error) {
     const code = getSafeFailureCode(error);
+    console.error("TRANSCRIPTION_WORKER_FAILED", {
+      jobId: job.id,
+      failureCode: code,
+      error: safeErrorDiagnostic(error),
+    });
     try {
       await failTranscriptionJob({
         job,
         workerId: invocationToken,
         code,
       });
-    } catch {
+    } catch (persistError) {
+      console.error("FAIL_TRANSCRIPTION_JOB_PERSIST_FAILED", {
+        jobId: job.id,
+        error: safeErrorDiagnostic(persistError),
+      });
       throw new Error("Unable to execute transcription job.");
     }
 
