@@ -9,8 +9,15 @@ const workerId = "transcription-cron";
 const leaseSeconds = 300;
 
 export async function GET(request: Request) {
-  if (!authorizeConfiguredWorkerRequest(request.headers.get("authorization"))) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (
+    !authorizeConfiguredWorkerRequest(
+      request.headers.get("authorization"),
+    )
+  ) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   try {
@@ -20,17 +27,23 @@ export async function GET(request: Request) {
       maxInputBytes: MAX_RECORDING_FILE_SIZE_BYTES,
       provider: createTranscriptionProvider(),
     });
-    return NextResponse.json({ status: result.status });
-} catch (error) {
-  console.error("TRANSCRIPTION_CRON_ERROR", error);
 
-  return NextResponse.json(
-    {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Unable to process transcription.",
-    },
-    { status: 500 },
-  );
+    return NextResponse.json({
+      status: result.status,
+    });
+  } catch (error) {
+    console.error("transcription cron failed:", error);
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to process transcription.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
 }
