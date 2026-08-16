@@ -49,24 +49,32 @@ export async function claimNextProcessingJob(input: unknown) {
   if (!parsed.success) throw new Error("Unable to claim processing job.");
 
   const supabase = createWorkerServiceRoleClient();
-const { data, error } = await supabase.rpc(
-  "claim_next_processing_job",
-  {
-    p_lease_seconds: parsed.data.leaseSeconds,
-    p_worker_id: parsed.data.workerId,
-  },
-);
-
-if (error) {
-  console.error(
-    "claim_next_processing_job rpc failed",
+  const { data, error } = await supabase.rpc(
+    "claim_next_processing_job",
     {
-      message: error.message,
-      details: error.details,
-      hint: error.hint,
-      code: error.code,
+      p_lease_seconds: parsed.data.leaseSeconds,
+      p_worker_id: parsed.data.workerId,
     },
   );
 
-  throw error;
+  if (error) {
+    console.error(
+      "claim_next_processing_job rpc failed",
+      {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      },
+    );
+
+    throw error;
+  }
+
+  return data
+    ? mapClaimedProcessingJob(
+        data as ClaimedProcessingJobRow,
+      )
+    : null;
 }
+
