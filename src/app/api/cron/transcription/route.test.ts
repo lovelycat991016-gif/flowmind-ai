@@ -2,19 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   authorize: vi.fn(),
-  getOpenAIEnv: vi.fn(),
+  createProvider: vi.fn(),
   execute: vi.fn(),
-  Provider: vi.fn(),
 }));
 
 vi.mock("@/features/transcription/worker/worker-auth", () => ({
   authorizeConfiguredWorkerRequest: mocks.authorize,
 }));
-vi.mock("@/shared/config/openai-env", () => ({
-  getOpenAIEnv: mocks.getOpenAIEnv,
-}));
-vi.mock("@/features/transcription/providers/openai-whisper-provider", () => ({
-  OpenAIWhisperTranscriptionProvider: mocks.Provider,
+vi.mock("@/features/transcription/factory/create-transcription-provider", () => ({
+  createTranscriptionProvider: mocks.createProvider,
 }));
 vi.mock("@/features/transcription/worker/execute-transcription-job", () => ({
   executeNextTranscriptionJob: mocks.execute,
@@ -34,13 +30,9 @@ describe("transcription cron route", () => {
     expect(mocks.execute).not.toHaveBeenCalled();
   });
 
-  it("runs the Whisper worker only after authorization", async () => {
+  it("runs the configured transcription provider only after authorization", async () => {
     mocks.authorize.mockReturnValue(true);
-    mocks.getOpenAIEnv.mockReturnValue({
-      apiKey: "server-only-key",
-      model: "gpt-4.1-mini",
-    });
-    mocks.Provider.mockImplementation(() => ({ provider: true }));
+    mocks.createProvider.mockReturnValue({ provider: true });
     mocks.execute.mockResolvedValue({ status: "completed", jobId: "job" });
 
     const response = await GET(
@@ -50,9 +42,7 @@ describe("transcription cron route", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mocks.Provider).toHaveBeenCalledWith({
-      apiKey: "server-only-key",
-    });
+    expect(mocks.createProvider).toHaveBeenCalledOnce();
     expect(mocks.execute).toHaveBeenCalledWith(
       expect.objectContaining({ provider: { provider: true } }),
     );
