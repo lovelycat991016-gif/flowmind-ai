@@ -21,10 +21,16 @@ export async function GET(request: Request) {
       provider: createTranscriptionProvider(),
     });
     return NextResponse.json({ status: result.status });
-  } catch {
-    return NextResponse.json(
-      { error: "Unable to process transcription." },
-      { status: 500 },
-    );
-  }
+} catch (error) {
+  console.error("TRANSCRIPTION_CRON_ERROR", error);
+
+  return NextResponse.json(
+    {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unable to process transcription.",
+    },
+    { status: 500 },
+  );
 }
