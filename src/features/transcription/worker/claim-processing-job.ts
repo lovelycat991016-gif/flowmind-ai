@@ -61,14 +61,14 @@ export async function claimNextProcessingJob(input: unknown) {
     console.error(
       "claim_next_processing_job rpc failed",
       {
-        message: error.message,
+        name: error instanceof Error ? error.name : undefined,
         details: error.details,
         hint: error.hint,
         code: error.code,
       },
     );
 
-    throw error;
+    throw new Error("Unable to claim processing job.");
   }
 
   return data
@@ -77,4 +77,3 @@ export async function claimNextProcessingJob(input: unknown) {
       )
     : null;
 }
-
