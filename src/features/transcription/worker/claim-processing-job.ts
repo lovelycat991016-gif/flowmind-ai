@@ -71,9 +71,11 @@ export async function claimNextProcessingJob(input: unknown) {
     throw new Error("Unable to claim processing job.");
   }
 
-  return data
-    ? mapClaimedProcessingJob(
-        data as ClaimedProcessingJobRow,
-      )
-    : null;
+  const rows = data as ClaimedProcessingJobRow[] | null;
+  if (!rows || rows.length === 0) return null;
+  if (rows.length !== 1) {
+    throw new Error("Unable to claim processing job.");
+  }
+
+  return mapClaimedProcessingJob(rows[0]);
 }

@@ -26,7 +26,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("claimNextProcessingJob", () => {
   it("claims and maps one queued job through the service-role RPC", async () => {
-    const rpc = vi.fn().mockResolvedValue({ data: jobRow, error: null });
+    const rpc = vi.fn().mockResolvedValue({ data: [jobRow], error: null });
     createWorkerServiceRoleClient.mockReturnValue({ rpc });
 
     await expect(
@@ -55,6 +55,26 @@ describe("claimNextProcessingJob", () => {
     await expect(
       claimNextProcessingJob({ workerId, leaseSeconds: 300 }),
     ).resolves.toBeNull();
+  });
+
+  it("returns null when the RPC returns an empty result set", async () => {
+    createWorkerServiceRoleClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
+
+    await expect(
+      claimNextProcessingJob({ workerId, leaseSeconds: 300 }),
+    ).resolves.toBeNull();
+  });
+
+  it("rejects an RPC response that claims more than one job", async () => {
+    createWorkerServiceRoleClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: [jobRow, jobRow], error: null }),
+    });
+
+    await expect(
+      claimNextProcessingJob({ workerId, leaseSeconds: 300 }),
+    ).rejects.toThrow("Unable to claim processing job.");
   });
 
   it("returns a safe error when the claim RPC fails", async () => {

@@ -40,6 +40,7 @@ describe("Supabase production contract", () => {
       "202608120001_add_worker_lease_recovery_and_fencing.sql",
       "202608170001_fix_claim_next_processing_job_role_check.sql",
       "202608170002_fix_claim_next_processing_job_security_definer.sql",
+      "202608190001_fix_claim_next_processing_job_ambiguous_columns.sql",
     ]);
   });
 
