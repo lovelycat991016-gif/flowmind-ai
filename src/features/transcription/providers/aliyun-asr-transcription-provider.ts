@@ -57,6 +57,60 @@ function mapTransportFailure(error: unknown): TranscriptionFailureCode {
   return "provider_request_failed";
 }
 
+function getContentType(response: Response) {
+  return response.headers.get("content-type")?.split(";", 1)[0] ?? null;
+}
+
+function getFileExtension(filename: string) {
+  const extension = filename.match(/\.([A-Za-z0-9]{1,16})$/)?.[1];
+  return extension?.toLowerCase() ?? null;
+}
+
+function getSafeErrorName(error: unknown) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return "AbortError";
+  }
+  if (error instanceof TypeError) return "TypeError";
+  return "UnknownError";
+}
+
+function getSafeTransportSummary(error: unknown, signal: AbortSignal | undefined) {
+  if (
+    signal?.aborted ||
+    (error instanceof DOMException && error.name === "AbortError")
+  ) {
+    return "abort";
+  }
+  if (error instanceof TypeError) return "network_error";
+  return "unknown_provider_error";
+}
+
+function getSafeErrorCode(payload: unknown) {
+  if (!payload || typeof payload !== "object") return undefined;
+  const candidate =
+    "Code" in payload
+      ? payload.Code
+      : "code" in payload
+        ? payload.code
+        : "ErrorCode" in payload
+          ? payload.ErrorCode
+          : "errorCode" in payload
+            ? payload.errorCode
+            : undefined;
+  return typeof candidate === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(candidate)
+    ? candidate
+    : undefined;
+}
+
+async function getResponseErrorCode(response: Response) {
+  if (getContentType(response) !== "application/json") return undefined;
+  try {
+    return getSafeErrorCode(await response.clone().json());
+  } catch {
+    return undefined;
+  }
+}
+
 function mapResponse(
   response: AliyunFlashRecognizerResponse,
   language: string | undefined,
@@ -118,6 +172,15 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       throw new AliyunAsrProviderError("provider_request_failed");
     }
 
+    console.info("ALIYUN_ASR_REQUEST_STARTED", {
+      operation: "FlashRecognizer",
+      endpointHost: url.host,
+      mimeType: input.mimeType,
+      audioBytes: input.bytes.byteLength,
+      fileExtension: getFileExtension(input.filename),
+      abortSignalAborted: input.signal?.aborted ?? false,
+    });
+
     let response: Response;
     try {
       response = await this.transport({
@@ -130,20 +193,62 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
         signal: input.signal,
       });
     } catch (error) {
+      console.error("ALIYUN_ASR_REQUEST_FAILED", {
+        errorName: getSafeErrorName(error),
+        errorSummary: getSafeTransportSummary(error, input.signal),
+        abortSignalAborted: input.signal?.aborted ?? false,
+      });
       throw new AliyunAsrProviderError(mapTransportFailure(error));
     }
 
+    const contentType = getContentType(response);
+    console.info("ALIYUN_ASR_RESPONSE", {
+      status: response.status,
+      contentType,
+      ok: response.ok,
+      abortSignalAborted: input.signal?.aborted ?? false,
+    });
     if (!response.ok) {
+      console.error("ALIYUN_ASR_HTTP_FAILED", {
+        status: response.status,
+        contentType,
+        errorCode: await getResponseErrorCode(response),
+        errorName: "AliyunAsrHttpError",
+        errorSummary: `http_${response.status}`,
+      });
       throw new AliyunAsrProviderError(mapHttpFailure(response.status));
     }
 
+    let payload: AliyunFlashRecognizerResponse;
     try {
-      return mapResponse(
-        (await response.json()) as AliyunFlashRecognizerResponse,
-        input.language,
-      );
+      payload = (await response.json()) as AliyunFlashRecognizerResponse;
+    } catch {
+      console.error("ALIYUN_ASR_RESPONSE_PARSE_FAILED", {
+        status: response.status,
+        contentType,
+        errorName: "InvalidAsrResponse",
+        errorSummary: "invalid_json",
+      });
+      throw new AliyunAsrProviderError("provider_request_failed");
+    }
+
+    try {
+      const result = mapResponse(payload, input.language);
+      console.info("ALIYUN_ASR_TRANSCRIPTION_COMPLETED", {
+        status: response.status,
+        transcriptLength: result.content.length,
+      });
+      return result;
     } catch (error) {
-      if (error instanceof AliyunAsrProviderError) throw error;
+      if (error instanceof AliyunAsrProviderError) {
+        console.error("ALIYUN_ASR_INVALID_RESULT", {
+          status: response.status,
+          contentType,
+          errorName: "InvalidAsrResult",
+          errorSummary: "missing_valid_transcript",
+        });
+        throw error;
+      }
       throw new AliyunAsrProviderError("provider_request_failed");
     }
   }

@@ -4,6 +4,7 @@ import type { TranscriptionFailureCode } from "@/entities/transcript/model/trans
 
 const ALIYUN_NLS_TOKEN_URL =
   "https://nls-meta.cn-shanghai.aliyuncs.com/?";
+const ALIYUN_NLS_TOKEN_HOST = "nls-meta.cn-shanghai.aliyuncs.com";
 
 type AliyunNlsTokenTransportRequest = {
   url: string;
@@ -48,6 +49,58 @@ function mapTransportFailure(
     return "provider_timeout";
   }
   return "provider_request_failed";
+}
+
+function getContentType(response: Response) {
+  return response.headers.get("content-type")?.split(";", 1)[0] ?? null;
+}
+
+function getSafeErrorName(error: unknown) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return "AbortError";
+  }
+  if (error instanceof TypeError) return "TypeError";
+  return "UnknownError";
+}
+
+function getSafeTransportSummary(
+  error: unknown,
+  signal: AbortSignal | undefined,
+) {
+  if (
+    signal?.aborted ||
+    (error instanceof DOMException && error.name === "AbortError")
+  ) {
+    return "abort";
+  }
+  if (error instanceof TypeError) return "network_error";
+  return "unknown_provider_error";
+}
+
+function getSafeErrorCode(payload: unknown) {
+  if (!payload || typeof payload !== "object") return undefined;
+  const candidate =
+    "Code" in payload
+      ? payload.Code
+      : "code" in payload
+        ? payload.code
+        : "ErrorCode" in payload
+          ? payload.ErrorCode
+          : "errorCode" in payload
+            ? payload.errorCode
+            : undefined;
+  return typeof candidate === "string" && /^[A-Za-z0-9_-]{1,100}$/.test(candidate)
+    ? candidate
+    : undefined;
+}
+
+async function getResponseErrorCode(response: Response) {
+  if (getContentType(response) !== "application/json") return undefined;
+  try {
+    return getSafeErrorCode(await response.clone().json());
+  } catch {
+    return undefined;
+  }
 }
 
 function formatTimestamp(value: Date) {
@@ -96,6 +149,11 @@ export class AliyunNlsTokenClient {
       .update(stringToSign)
       .digest("base64");
 
+    console.info("ALIYUN_NLS_TOKEN_REQUEST_STARTED", {
+      operation: "CreateToken",
+      endpointHost: ALIYUN_NLS_TOKEN_HOST,
+    });
+
     let response: Response;
     try {
       response = await this.transport({
@@ -103,11 +161,28 @@ export class AliyunNlsTokenClient {
         signal: input?.signal,
       });
     } catch (error) {
+      console.error("ALIYUN_NLS_TOKEN_FAILED", {
+        errorName: getSafeErrorName(error),
+        errorSummary: getSafeTransportSummary(error, input?.signal),
+      });
       throw new AliyunNlsTokenError(
         mapTransportFailure(error, input?.signal),
       );
     }
+    const contentType = getContentType(response);
+    console.info("ALIYUN_NLS_TOKEN_RESPONSE", {
+      status: response.status,
+      contentType,
+      ok: response.ok,
+    });
     if (!response.ok) {
+      console.error("ALIYUN_NLS_TOKEN_FAILED", {
+        status: response.status,
+        contentType,
+        errorCode: await getResponseErrorCode(response),
+        errorName: "AliyunNlsTokenHttpError",
+        errorSummary: `http_${response.status}`,
+      });
       throw new AliyunNlsTokenError(mapHttpFailure(response.status));
     }
 
@@ -115,11 +190,23 @@ export class AliyunNlsTokenClient {
       const payload = (await response.json()) as AliyunNlsTokenResponse;
       const token = payload.Token?.Id;
       if (typeof token !== "string" || !token.trim()) {
+        console.error("ALIYUN_NLS_TOKEN_FAILED", {
+          status: response.status,
+          contentType,
+          errorName: "InvalidTokenResponse",
+          errorSummary: "missing_token_id",
+        });
         throw new AliyunNlsTokenError("provider_request_failed");
       }
       return token;
     } catch (error) {
       if (error instanceof AliyunNlsTokenError) throw error;
+      console.error("ALIYUN_NLS_TOKEN_FAILED", {
+        status: response.status,
+        contentType,
+        errorName: "InvalidTokenResponse",
+        errorSummary: "invalid_json",
+      });
       throw new AliyunNlsTokenError("provider_request_failed");
     }
   }
