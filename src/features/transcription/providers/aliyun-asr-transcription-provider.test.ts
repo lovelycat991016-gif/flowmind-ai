@@ -77,6 +77,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
     [429, "provider_rate_limited"],
     [503, "provider_unavailable"],
   ])("maps ASR HTTP %i to the safe %s code", async (status, code) => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
     const provider = new AliyunAsrTranscriptionProvider({
       appKey: "app-key",
       tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
@@ -84,6 +85,10 @@ describe("AliyunAsrTranscriptionProvider", () => {
     });
 
     await expect(provider.transcribe(input)).rejects.toMatchObject({ code });
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "ALIYUN_ASR_RESPONSE_RECEIVED",
+      expect.objectContaining({ status, ok: false, aborted: false }),
+    );
   });
 
   it("maps token failures and malformed ASR output safely", async () => {
@@ -130,6 +135,16 @@ describe("AliyunAsrTranscriptionProvider", () => {
         mimeType: input.mimeType,
         audioBytes: input.bytes.length,
         fileExtension: "webm",
+      }),
+    );
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "ALIYUN_ASR_RESPONSE_RECEIVED",
+      expect.objectContaining({
+        status: 200,
+        ok: true,
+        contentType: "application/json",
+        contentLength: null,
+        aborted: false,
       }),
     );
     expect(consoleInfo).toHaveBeenCalledWith(
@@ -188,11 +203,56 @@ describe("AliyunAsrTranscriptionProvider", () => {
     });
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_RESPONSE_PARSE_FAILED",
-      expect.objectContaining({ errorSummary: "invalid_json" }),
+      expect.objectContaining({
+        status: 200,
+        contentType: "application/json",
+        errorName: "InvalidAsrResponse",
+        safeSummary: "invalid_json",
+      }),
     );
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_INVALID_RESULT",
-      expect.objectContaining({ errorSummary: "missing_valid_transcript" }),
+      expect.objectContaining({
+        status: 200,
+        resultKeys: ["sentences"],
+        safeSummary: "missing_valid_transcript",
+      }),
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-token");
+  });
+
+  it("records a non-JSON FlashRecognizer response without logging its body", async () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const provider = new AliyunAsrTranscriptionProvider({
+      appKey: "app-key",
+      tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
+      transport: vi.fn().mockResolvedValue(
+        new Response("token=secret-token", {
+          headers: {
+            "content-length": "18",
+            "content-type": "text/plain",
+          },
+        }),
+      ),
+    });
+
+    await expect(provider.transcribe(input)).rejects.toMatchObject({
+      code: "provider_request_failed",
+    });
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "ALIYUN_ASR_RESPONSE_RECEIVED",
+      expect.objectContaining({
+        status: 200,
+        ok: true,
+        contentType: "text/plain",
+        contentLength: 18,
+        aborted: false,
+      }),
+    );
+    expect(consoleError).toHaveBeenCalledWith(
+      "ALIYUN_ASR_RESPONSE_PARSE_FAILED",
+      expect.objectContaining({ safeSummary: "invalid_json" }),
     );
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-token");
   });

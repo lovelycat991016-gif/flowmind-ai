@@ -61,6 +61,22 @@ function getContentType(response: Response) {
   return response.headers.get("content-type")?.split(";", 1)[0] ?? null;
 }
 
+function getContentLength(response: Response) {
+  const value = response.headers.get("content-length");
+  if (!value || !/^\d{1,20}$/.test(value)) return null;
+
+  const length = Number(value);
+  return Number.isSafeInteger(length) ? length : null;
+}
+
+function getSafeResultKeys(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+
+  return Object.keys(value)
+    .filter((key) => /^[A-Za-z0-9_-]{1,64}$/.test(key))
+    .slice(0, 20);
+}
+
 function getFileExtension(filename: string) {
   const extension = filename.match(/\.([A-Za-z0-9]{1,16})$/)?.[1];
   return extension?.toLowerCase() ?? null;
@@ -202,11 +218,19 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     }
 
     const contentType = getContentType(response);
+    const aborted = input.signal?.aborted ?? false;
+    console.info("ALIYUN_ASR_RESPONSE_RECEIVED", {
+      status: response.status,
+      ok: response.ok,
+      contentType,
+      contentLength: getContentLength(response),
+      aborted,
+    });
     console.info("ALIYUN_ASR_RESPONSE", {
       status: response.status,
       contentType,
       ok: response.ok,
-      abortSignalAborted: input.signal?.aborted ?? false,
+      abortSignalAborted: aborted,
     });
     if (!response.ok) {
       console.error("ALIYUN_ASR_HTTP_FAILED", {
@@ -228,6 +252,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
         contentType,
         errorName: "InvalidAsrResponse",
         errorSummary: "invalid_json",
+        safeSummary: "invalid_json",
       });
       throw new AliyunAsrProviderError("provider_request_failed");
     }
@@ -246,6 +271,8 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
           contentType,
           errorName: "InvalidAsrResult",
           errorSummary: "missing_valid_transcript",
+          resultKeys: getSafeResultKeys(payload),
+          safeSummary: "missing_valid_transcript",
         });
         throw error;
       }
