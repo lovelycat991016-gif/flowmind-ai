@@ -5,6 +5,7 @@ export type TranscriptionRequest = {
   mimeType: string;
   bytes: Uint8Array;
   language?: string;
+  correlationId?: string;
   signal?: AbortSignal;
 };
 

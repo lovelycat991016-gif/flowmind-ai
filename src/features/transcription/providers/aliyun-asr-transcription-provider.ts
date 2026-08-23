@@ -193,6 +193,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
 
   async transcribe(input: TranscriptionRequest) {
     const url = new URL(ALIYUN_FLASH_RECOGNIZER_URL);
+    const correlationId = input.correlationId ?? "unavailable";
     const audioBytes = new Uint8Array(input.bytes.length);
     audioBytes.set(input.bytes);
     url.searchParams.set("appkey", this.options.appKey);
@@ -216,6 +217,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     url.searchParams.set("token", token);
 
     console.info("ALIYUN_ASR_REQUEST_STARTED", {
+      correlationId,
       operation: "FlashRecognizer",
       endpointHost: url.host,
       mimeType: input.mimeType,
@@ -227,6 +229,11 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     let response: Response;
     let transportError: unknown;
     try {
+      console.info("ALIYUN_ASR_FETCH_DISPATCHED", {
+        correlationId,
+        endpointHost: url.host,
+        abortSignalAborted: input.signal?.aborted ?? false,
+      });
       response = await this.transport({
         url: url.toString(),
         headers: {
@@ -238,6 +245,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     } catch (error) {
       transportError = error;
       console.error("ALIYUN_ASR_REQUEST_FAILED", {
+        correlationId,
         errorName: getSafeErrorName(error),
         errorSummary: getSafeTransportSummary(error, input.signal),
         abortSignalAborted: input.signal?.aborted ?? false,
@@ -246,6 +254,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     } finally {
       const errorCode = getSafeTransportErrorCode(transportError);
       console.info("ALIYUN_ASR_REQUEST_SETTLED", {
+        correlationId,
         endpointHost: url.host,
         settled: true,
         abortSignalAborted: input.signal?.aborted ?? false,
@@ -262,6 +271,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     const contentType = getContentType(response);
     const aborted = input.signal?.aborted ?? false;
     console.info("ALIYUN_ASR_RESPONSE_RECEIVED", {
+      correlationId,
       status: response.status,
       ok: response.ok,
       contentType,
@@ -269,6 +279,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       aborted,
     });
     console.info("ALIYUN_ASR_RESPONSE", {
+      correlationId,
       status: response.status,
       contentType,
       ok: response.ok,
@@ -276,6 +287,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     });
     if (!response.ok) {
       console.error("ALIYUN_ASR_HTTP_FAILED", {
+        correlationId,
         status: response.status,
         contentType,
         errorCode: await getResponseErrorCode(response),
@@ -290,6 +302,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       payload = (await response.json()) as AliyunFlashRecognizerResponse;
     } catch {
       console.error("ALIYUN_ASR_RESPONSE_PARSE_FAILED", {
+        correlationId,
         status: response.status,
         contentType,
         errorName: "InvalidAsrResponse",
@@ -302,6 +315,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     try {
       const result = mapResponse(payload, input.language);
       console.info("ALIYUN_ASR_TRANSCRIPTION_COMPLETED", {
+        correlationId,
         status: response.status,
         transcriptLength: result.content.length,
       });
@@ -309,6 +323,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     } catch (error) {
       if (error instanceof AliyunAsrProviderError) {
         console.error("ALIYUN_ASR_INVALID_RESULT", {
+          correlationId,
           status: response.status,
           contentType,
           errorName: "InvalidAsrResult",

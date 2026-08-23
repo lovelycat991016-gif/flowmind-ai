@@ -71,6 +71,7 @@ export async function executeNextTranscriptionJob(input: {
     throw new Error("Unable to execute transcription job.");
   }
 
+  const correlationId = createInvocationToken("transcription-correlation");
   const invocationToken = createInvocationToken(parsed.data.workerId);
   const now = input.now ?? Date.now;
   const startedAtMs = now();
@@ -109,6 +110,14 @@ export async function executeNextTranscriptionJob(input: {
       throw new WhisperProviderError("provider_timeout");
     }
     const controller = new AbortController();
+    const handleAbort = () => {
+      console.info("ALIYUN_ASR_ABORT_SIGNALLED", {
+        correlationId,
+        elapsedMs: Math.max(0, now() - startedAtMs),
+        jobId: job.id,
+      });
+    };
+    controller.signal.addEventListener("abort", handleAbort, { once: true });
     const timeout = setTimeout(
       () => controller.abort(),
       deadline.providerTimeoutMs,
@@ -119,10 +128,12 @@ export async function executeNextTranscriptionJob(input: {
         filename: audio.filename,
         mimeType: audio.mimeType,
         bytes: audio.bytes,
+        correlationId,
         signal: controller.signal,
       });
     } finally {
       clearTimeout(timeout);
+      controller.signal.removeEventListener("abort", handleAbort);
     }
     await completeTranscriptionJob({
       job,

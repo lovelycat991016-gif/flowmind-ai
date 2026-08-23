@@ -28,6 +28,8 @@ import { executeNextTranscriptionJob } from "./execute-transcription-job";
 const workerId = "transcription-cron";
 const invocationToken =
   "transcription-cron:550e8400-e29b-41d4-a716-446655440000";
+const correlationId =
+  "transcription-correlation:6d45fa52-e6cd-46f3-b7a6-2866af0c5891";
 const job = {
   id: "911a4a76-8622-49c9-b3d1-a07c55514f91",
   recordingId: "6b79f5f3-f083-4a75-b74b-41342f2b1454",
@@ -67,7 +69,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.completeTranscriptionJob.mockResolvedValue(undefined);
   mocks.failTranscriptionJob.mockResolvedValue(undefined);
-  mocks.createInvocationToken.mockReturnValue(invocationToken);
+  mocks.createInvocationToken.mockImplementation((workerRole: string) =>
+    workerRole === "transcription-correlation"
+      ? correlationId
+      : invocationToken,
+  );
 });
 
 afterEach(() => {
@@ -100,6 +106,7 @@ describe("executeNextTranscriptionJob", () => {
       filename: audio.filename,
       mimeType: audio.mimeType,
       bytes: audio.bytes,
+      correlationId,
       signal: expect.any(AbortSignal),
     });
     expect(mocks.completeTranscriptionJob).toHaveBeenCalledWith({
@@ -137,6 +144,8 @@ describe("executeNextTranscriptionJob", () => {
 
   it("aborts Whisper at the timeout reduced by storage delay", async () => {
     vi.useFakeTimers();
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+    const addEventListener = vi.spyOn(AbortSignal.prototype, "addEventListener");
     mocks.claimNextProcessingJob.mockResolvedValue(job);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
     provider.transcribe.mockImplementation(({ signal }: { signal?: AbortSignal }) =>
@@ -152,7 +161,11 @@ describe("executeNextTranscriptionJob", () => {
       leaseSeconds: 300,
       maxInputBytes: 1_000,
       provider,
-      now: vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(180_000),
+      now: vi
+        .fn()
+        .mockReturnValueOnce(0)
+        .mockReturnValueOnce(180_000)
+        .mockReturnValueOnce(195_000),
     });
 
     await vi.advanceTimersByTimeAsync(15_000);
@@ -167,6 +180,19 @@ describe("executeNextTranscriptionJob", () => {
       workerId: invocationToken,
       code: "provider_timeout",
     });
+    expect(addEventListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+      { once: true },
+    );
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "ALIYUN_ASR_ABORT_SIGNALLED",
+      {
+        correlationId,
+        elapsedMs: 195_000,
+        jobId: job.id,
+      },
+    );
   });
 
   it("returns idle without downloading audio when no job is claimable", async () => {

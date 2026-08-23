@@ -8,6 +8,7 @@ const input = {
   mimeType: "audio/webm",
   bytes: new Uint8Array([97, 117, 100, 105, 111]),
   language: "zh",
+  correlationId: "transcription-correlation:test-invocation",
 };
 
 function response(body: unknown, status = 200) {
@@ -82,6 +83,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
       code: "provider_timeout",
     });
     expect(consoleInfo).toHaveBeenCalledWith("ALIYUN_ASR_REQUEST_SETTLED", {
+      correlationId: input.correlationId,
       endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
       settled: true,
       abortSignalAborted: true,
@@ -91,6 +93,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_REQUEST_FAILED",
       expect.objectContaining({
+        correlationId: input.correlationId,
         errorName: "AbortError",
         errorSummary: "abort",
         abortSignalAborted: true,
@@ -159,6 +162,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(consoleInfo).toHaveBeenCalledWith(
       "ALIYUN_ASR_REQUEST_STARTED",
       expect.objectContaining({
+        correlationId: input.correlationId,
         operation: "FlashRecognizer",
         endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
         mimeType: input.mimeType,
@@ -167,8 +171,17 @@ describe("AliyunAsrTranscriptionProvider", () => {
       }),
     );
     expect(consoleInfo).toHaveBeenCalledWith(
+      "ALIYUN_ASR_FETCH_DISPATCHED",
+      expect.objectContaining({
+        correlationId: input.correlationId,
+        endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
+        abortSignalAborted: false,
+      }),
+    );
+    expect(consoleInfo).toHaveBeenCalledWith(
       "ALIYUN_ASR_RESPONSE_RECEIVED",
       expect.objectContaining({
+        correlationId: input.correlationId,
         status: 200,
         ok: true,
         contentType: "application/json",
@@ -177,6 +190,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
       }),
     );
     expect(consoleInfo).toHaveBeenCalledWith("ALIYUN_ASR_REQUEST_SETTLED", {
+      correlationId: input.correlationId,
       endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
       settled: true,
       abortSignalAborted: false,
@@ -184,7 +198,11 @@ describe("AliyunAsrTranscriptionProvider", () => {
     });
     expect(consoleInfo).toHaveBeenCalledWith(
       "ALIYUN_ASR_TRANSCRIPTION_COMPLETED",
-      expect.objectContaining({ status: 200, transcriptLength: 15 }),
+      expect.objectContaining({
+        correlationId: input.correlationId,
+        status: 200,
+        transcriptLength: 15,
+      }),
     );
     expect(JSON.stringify(consoleInfo.mock.calls)).not.toContain("temporary-token");
   });
@@ -205,6 +223,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_HTTP_FAILED",
       expect.objectContaining({
+        correlationId: input.correlationId,
         status: 401,
         errorCode: "InvalidToken",
         errorSummary: "http_401",
@@ -239,6 +258,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_RESPONSE_PARSE_FAILED",
       expect.objectContaining({
+        correlationId: input.correlationId,
         status: 200,
         contentType: "application/json",
         errorName: "InvalidAsrResponse",
@@ -248,6 +268,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_INVALID_RESULT",
       expect.objectContaining({
+        correlationId: input.correlationId,
         status: 200,
         resultKeys: ["sentences"],
         safeSummary: "missing_valid_transcript",
@@ -309,6 +330,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
       code: "provider_request_failed",
     });
     expect(consoleInfo).toHaveBeenCalledWith("ALIYUN_ASR_REQUEST_SETTLED", {
+      correlationId: input.correlationId,
       endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
       settled: true,
       abortSignalAborted: false,
@@ -318,6 +340,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_REQUEST_FAILED",
       expect.objectContaining({
+        correlationId: input.correlationId,
         errorName: "TypeError",
         errorSummary: "network_error",
         abortSignalAborted: false,
