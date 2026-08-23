@@ -56,6 +56,8 @@ describe("AliyunAsrTranscriptionProvider", () => {
   });
 
   it("maps caller cancellation to the existing provider timeout code", async () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const controller = new AbortController();
     controller.abort();
     const provider = new AliyunAsrTranscriptionProvider({
@@ -67,6 +69,21 @@ describe("AliyunAsrTranscriptionProvider", () => {
     await expect(provider.transcribe({ ...input, signal: controller.signal })).rejects.toMatchObject({
       code: "provider_timeout",
     });
+    expect(consoleInfo).toHaveBeenCalledWith("ALIYUN_ASR_REQUEST_SETTLED", {
+      endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
+      settled: true,
+      abortSignalAborted: true,
+      errorName: "AbortError",
+      safeSummary: "abort",
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "ALIYUN_ASR_REQUEST_FAILED",
+      expect.objectContaining({
+        errorName: "AbortError",
+        errorSummary: "abort",
+        abortSignalAborted: true,
+      }),
+    );
   });
 
   it.each([
@@ -147,6 +164,12 @@ describe("AliyunAsrTranscriptionProvider", () => {
         aborted: false,
       }),
     );
+    expect(consoleInfo).toHaveBeenCalledWith("ALIYUN_ASR_REQUEST_SETTLED", {
+      endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
+      settled: true,
+      abortSignalAborted: false,
+      safeSummary: "response_received",
+    });
     expect(consoleInfo).toHaveBeenCalledWith(
       "ALIYUN_ASR_TRANSCRIPTION_COMPLETED",
       expect.objectContaining({ status: 200, transcriptLength: 15 }),
@@ -257,35 +280,38 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-token");
   });
 
-  it("logs a safe network failure and maps aborts to the existing timeout code", async () => {
+  it("logs settled and failed diagnostics for a network exception", async () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const networkFailure = new AliyunAsrTranscriptionProvider({
       appKey: "app-key",
       tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
-      transport: vi.fn().mockRejectedValue(new TypeError("network secret-token")),
-    });
-    const controller = new AbortController();
-    controller.abort();
-    const aborted = new AliyunAsrTranscriptionProvider({
-      appKey: "app-key",
-      tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
-      transport: vi.fn().mockRejectedValue(new DOMException("", "AbortError")),
+      transport: vi.fn().mockRejectedValue(
+        Object.assign(new TypeError("network secret-token"), {
+          code: "temporary-token",
+        }),
+      ),
     });
 
     await expect(networkFailure.transcribe(input)).rejects.toMatchObject({
       code: "provider_request_failed",
     });
-    await expect(aborted.transcribe({ ...input, signal: controller.signal })).rejects.toMatchObject({
-      code: "provider_timeout",
+    expect(consoleInfo).toHaveBeenCalledWith("ALIYUN_ASR_REQUEST_SETTLED", {
+      endpointHost: "nls-gateway-cn-shanghai.aliyuncs.com",
+      settled: true,
+      abortSignalAborted: false,
+      errorName: "TypeError",
+      safeSummary: "network_error",
     });
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_REQUEST_FAILED",
-      expect.objectContaining({ errorSummary: "network_error", abortSignalAborted: false }),
+      expect.objectContaining({
+        errorName: "TypeError",
+        errorSummary: "network_error",
+        abortSignalAborted: false,
+      }),
     );
-    expect(consoleError).toHaveBeenCalledWith(
-      "ALIYUN_ASR_REQUEST_FAILED",
-      expect.objectContaining({ errorSummary: "abort", abortSignalAborted: true }),
-    );
+    expect(JSON.stringify(consoleInfo.mock.calls)).not.toContain("secret-token");
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-token");
   });
 });

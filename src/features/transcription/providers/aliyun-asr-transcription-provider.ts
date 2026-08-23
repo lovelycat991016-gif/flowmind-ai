@@ -13,6 +13,20 @@ import {
 const ALIYUN_FLASH_RECOGNIZER_URL =
   "https://nls-gateway-cn-shanghai.aliyuncs.com/stream/v1/FlashRecognizer";
 
+const SAFE_TRANSPORT_ERROR_CODES = new Set([
+  "EAI_AGAIN",
+  "ECONNABORTED",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "UND_ERR_BODY_TIMEOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_HEADERS_TIMEOUT",
+  "UND_ERR_SOCKET",
+]);
+
 type AliyunAsrTransportRequest = {
   url: string;
   headers: { "Content-Type": string; "X-NLS-Token": string };
@@ -118,6 +132,13 @@ function getSafeErrorCode(payload: unknown) {
     : undefined;
 }
 
+function getSafeTransportErrorCode(error: unknown) {
+  const errorCode = getSafeErrorCode(error);
+  return errorCode && SAFE_TRANSPORT_ERROR_CODES.has(errorCode)
+    ? errorCode
+    : undefined;
+}
+
 async function getResponseErrorCode(response: Response) {
   if (getContentType(response) !== "application/json") return undefined;
   try {
@@ -198,6 +219,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     });
 
     let response: Response;
+    let transportError: unknown;
     try {
       response = await this.transport({
         url: url.toString(),
@@ -209,12 +231,27 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
         signal: input.signal,
       });
     } catch (error) {
+      transportError = error;
       console.error("ALIYUN_ASR_REQUEST_FAILED", {
         errorName: getSafeErrorName(error),
         errorSummary: getSafeTransportSummary(error, input.signal),
         abortSignalAborted: input.signal?.aborted ?? false,
       });
       throw new AliyunAsrProviderError(mapTransportFailure(error));
+    } finally {
+      const errorCode = getSafeTransportErrorCode(transportError);
+      console.info("ALIYUN_ASR_REQUEST_SETTLED", {
+        endpointHost: url.host,
+        settled: true,
+        abortSignalAborted: input.signal?.aborted ?? false,
+        ...(transportError
+          ? { errorName: getSafeErrorName(transportError) }
+          : {}),
+        ...(errorCode ? { errorCode } : {}),
+        safeSummary: transportError
+          ? getSafeTransportSummary(transportError, input.signal)
+          : "response_received",
+      });
     }
 
     const contentType = getContentType(response);
