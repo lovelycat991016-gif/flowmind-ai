@@ -29,7 +29,7 @@ const SAFE_TRANSPORT_ERROR_CODES = new Set([
 
 type AliyunAsrTransportRequest = {
   url: string;
-  headers: { "Content-Type": string; "X-NLS-Token": string };
+  headers: { "Content-Type": string };
   body: ArrayBuffer;
   signal?: AbortSignal;
 };
@@ -196,7 +196,12 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     const audioBytes = new Uint8Array(input.bytes.length);
     audioBytes.set(input.bytes);
     url.searchParams.set("appkey", this.options.appKey);
-    url.searchParams.set("format", input.mimeType.split("/")[1] ?? "wav");
+    url.searchParams.set(
+      "format",
+      input.mimeType === "audio/mpeg"
+        ? "mp3"
+        : (input.mimeType.split("/")[1] ?? "wav"),
+    );
     if (input.language) url.searchParams.set("language", input.language);
 
     let token: string;
@@ -208,6 +213,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       }
       throw new AliyunAsrProviderError("provider_request_failed");
     }
+    url.searchParams.set("token", token);
 
     console.info("ALIYUN_ASR_REQUEST_STARTED", {
       operation: "FlashRecognizer",
@@ -224,8 +230,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       response = await this.transport({
         url: url.toString(),
         headers: {
-          "Content-Type": input.mimeType,
-          "X-NLS-Token": token,
+          "Content-Type": "application/octet-stream",
         },
         body: audioBytes.buffer as ArrayBuffer,
         signal: input.signal,

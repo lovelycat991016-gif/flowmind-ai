@@ -21,6 +21,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe("AliyunAsrTranscriptionProvider", () => {
   it("maps an Aliyun file recognition response into the provider-neutral result", async () => {
+    const controller = new AbortController();
     const transport = vi.fn().mockResolvedValue(
       response({
         result: "Project status is on track.",
@@ -35,7 +36,14 @@ describe("AliyunAsrTranscriptionProvider", () => {
       transport,
     });
 
-    await expect(provider.transcribe(input)).resolves.toEqual({
+    await expect(
+      provider.transcribe({
+        ...input,
+        filename: "weekly-sync.mp3",
+        mimeType: "audio/mpeg",
+        signal: controller.signal,
+      }),
+    ).resolves.toEqual({
       provider: "aliyun",
       providerModel: "flash-recognizer",
       language: "zh",
@@ -50,9 +58,13 @@ describe("AliyunAsrTranscriptionProvider", () => {
       ],
     });
     expect(transport).toHaveBeenCalledOnce();
-    expect(transport.mock.calls[0]?.[0].headers["X-NLS-Token"]).toBe(
-      "temporary-token",
-    );
+    const request = transport.mock.calls[0]?.[0];
+    const requestUrl = new URL(request.url);
+    expect(requestUrl.searchParams.get("format")).toBe("mp3");
+    expect(requestUrl.searchParams.get("token")).toBe("temporary-token");
+    expect(request.headers["Content-Type"]).toBe("application/octet-stream");
+    expect(request.headers).not.toHaveProperty("X-NLS-Token");
+    expect(request.signal).toBe(controller.signal);
   });
 
   it("maps caller cancellation to the existing provider timeout code", async () => {
