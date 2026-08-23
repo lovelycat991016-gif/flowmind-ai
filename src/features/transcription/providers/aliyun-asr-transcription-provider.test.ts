@@ -207,29 +207,48 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(JSON.stringify(consoleInfo.mock.calls)).not.toContain("temporary-token");
   });
 
-  it("logs an ASR HTTP failure without exposing provider response content", async () => {
+  it("logs a safe ASR HTTP 400 body without exposing reflected secrets", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const provider = new AliyunAsrTranscriptionProvider({
       appKey: "app-key",
       tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
       transport: vi.fn().mockResolvedValue(
-        response({ Code: "InvalidToken", Message: "token=secret-token" }, 401),
+        response(
+          {
+            Code: "InvalidParameter",
+            Message:
+              "Invalid token=temporary-token at https://example.com/private?token=temporary-token",
+            request_id: "request-123",
+          },
+          400,
+        ),
       ),
     });
 
     await expect(provider.transcribe(input)).rejects.toMatchObject({
-      code: "provider_request_failed",
+      code: "provider_rejected_audio",
+    });
+    expect(consoleError).toHaveBeenCalledWith("ALIYUN_ASR_ERROR_BODY", {
+      code: "InvalidParameter",
+      message: "Invalid token=[redacted] at [redacted-url]",
+      request_id: "request-123",
+      status: 400,
     });
     expect(consoleError).toHaveBeenCalledWith(
       "ALIYUN_ASR_HTTP_FAILED",
       expect.objectContaining({
         correlationId: input.correlationId,
-        status: 401,
-        errorCode: "InvalidToken",
-        errorSummary: "http_401",
+        status: 400,
+        errorCode: "InvalidParameter",
+        errorSummary: "http_400",
       }),
     );
-    expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-token");
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+      "temporary-token",
+    );
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+      "https://example.com/private",
+    );
   });
 
   it("logs safe diagnostics for invalid JSON and an invalid result", async () => {

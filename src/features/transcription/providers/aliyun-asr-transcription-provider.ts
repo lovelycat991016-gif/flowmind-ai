@@ -139,12 +139,57 @@ function getSafeTransportErrorCode(error: unknown) {
     : undefined;
 }
 
-async function getResponseErrorCode(response: Response) {
+function getSafeResponseString(payload: unknown, keys: string[]) {
+  if (!payload || typeof payload !== "object") return undefined;
+
+  for (const key of keys) {
+    if (key in payload && typeof payload[key as keyof typeof payload] === "string") {
+      return payload[key as keyof typeof payload] as string;
+    }
+  }
+  return undefined;
+}
+
+function getSafeResponseMessage(payload: unknown, token: string) {
+  const message = getSafeResponseString(payload, ["Message", "message"]);
+  if (!message) return undefined;
+
+  return (token ? message.replaceAll(token, "[redacted]") : message)
+    .replace(/https?:\/\/\S+/gi, "[redacted-url]")
+    .replace(
+      /\b(?:token|access[_ -]?key(?:id|secret)?|secret|authorization|cookie|signature)\b\s*(?:=|:)\s*[^\s,;]+/gi,
+      (value) => `${value.split(/(?:=|:)/)[0]}=[redacted]`,
+    )
+    .slice(0, 500);
+}
+
+function getSafeResponseRequestId(payload: unknown, keys: string[]) {
+  const requestId = getSafeResponseString(payload, keys);
+  return requestId && /^[A-Za-z0-9_.:-]{1,200}$/.test(requestId)
+    ? requestId
+    : undefined;
+}
+
+async function getResponseErrorDiagnostic(response: Response, token: string) {
   if (getContentType(response) !== "application/json") return undefined;
   try {
-    return getSafeErrorCode(await response.clone().json());
+    const payload = await response.clone().json();
+    const code = getSafeErrorCode(payload);
+    const message = getSafeResponseMessage(payload, token);
+    const requestId = getSafeResponseRequestId(payload, [
+      "RequestId",
+      "requestId",
+    ]);
+    const request_id = getSafeResponseRequestId(payload, ["request_id"]);
+    return {
+      ...(code ? { code } : {}),
+      ...(message ? { message } : {}),
+      ...(requestId ? { requestId } : {}),
+      ...(request_id ? { request_id } : {}),
+      status: response.status,
+    };
   } catch {
-    return undefined;
+    return { status: response.status };
   }
 }
 
@@ -286,11 +331,15 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       abortSignalAborted: aborted,
     });
     if (!response.ok) {
+      const errorBody = await getResponseErrorDiagnostic(response, token);
+      if (errorBody) {
+        console.error("ALIYUN_ASR_ERROR_BODY", errorBody);
+      }
       console.error("ALIYUN_ASR_HTTP_FAILED", {
         correlationId,
         status: response.status,
         contentType,
-        errorCode: await getResponseErrorCode(response),
+        errorCode: errorBody?.code,
         errorName: "AliyunAsrHttpError",
         errorSummary: `http_${response.status}`,
       });
