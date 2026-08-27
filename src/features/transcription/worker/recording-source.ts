@@ -92,7 +92,7 @@ export async function getRecordingAudioForClaimedJob(input: {
     throw new RecordingSourceError("invalid_audio");
   }
   if (!isRecordingMimeType(row.mime_type)) {
-    throw new RecordingSourceError("unsupported_audio_type");
+    throw new RecordingSourceError("audio_format_unsupported");
   }
   if (row.file_size_bytes > input.maxInputBytes) {
     throw new RecordingSourceError("transcription_input_too_large");

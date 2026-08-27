@@ -110,4 +110,14 @@ describe("transcription worker status handling", () => {
         .success,
     ).toBe(false);
   });
+
+  it.each([
+    "audio_format_mismatch",
+    "audio_format_unsupported",
+    "audio_format_unrecognized",
+  ])("accepts the non-retryable %s failure code", (failureCode) => {
+    expect(transcriptionFailureCodeSchema.safeParse(failureCode).success).toBe(
+      true,
+    );
+  });
 });

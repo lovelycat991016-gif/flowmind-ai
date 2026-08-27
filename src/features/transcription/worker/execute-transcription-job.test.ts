@@ -23,6 +23,11 @@ vi.mock("./create-invocation-token", () => ({
 }));
 
 import { WhisperProviderError } from "../providers/openai-whisper-provider";
+import { AliyunAsrTranscriptionProvider } from "../providers/aliyun-asr-transcription-provider";
+import {
+  m4aBytes,
+  webmBytes,
+} from "../../recordings/audio-format/audio-format-test-fixtures";
 import { executeNextTranscriptionJob } from "./execute-transcription-job";
 
 const workerId = "transcription-cron";
@@ -45,7 +50,7 @@ const audio = {
   recording: {},
   filename: "weekly-sync.webm",
   mimeType: "audio/webm",
-  bytes: new Uint8Array([1, 2, 3]),
+  bytes: webmBytes,
 };
 
 const result = {
@@ -140,6 +145,95 @@ describe("executeNextTranscriptionJob", () => {
       workerId: invocationToken,
       code: "provider_timeout",
     });
+  });
+
+  it("fails a declared MP3 containing M4A bytes before Aliyun token or transport dispatch", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue({
+      ...audio,
+      filename: "王村小学.mp3",
+      mimeType: "audio/mpeg",
+      bytes: m4aBytes,
+    });
+    const getToken = vi.fn().mockResolvedValue("unused-token");
+    const transport = vi.fn().mockRejectedValue(new Error("must not dispatch"));
+    const aliyunProvider = new AliyunAsrTranscriptionProvider({
+      appKey: "test-app-key",
+      tokenClient: { getToken },
+      transport,
+    });
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 2_000_000,
+        provider: aliyunProvider,
+      }),
+    ).resolves.toEqual({
+      status: "failed",
+      jobId: job.id,
+      code: "audio_format_mismatch",
+    });
+
+    expect(getToken).not.toHaveBeenCalled();
+    expect(transport).not.toHaveBeenCalled();
+    expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
+      job,
+      workerId: invocationToken,
+      code: "audio_format_mismatch",
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "TRANSCRIPTION_WORKER_FAILED",
+      expect.objectContaining({ failureCode: "audio_format_mismatch" }),
+    );
+  });
+
+  it("fails unknown bytes before provider dispatch", async () => {
+    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue({
+      ...audio,
+      filename: "unknown.mp3",
+      mimeType: "audio/mpeg",
+      bytes: new Uint8Array([1, 2, 3, 4]),
+    });
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+      }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      code: "audio_format_unrecognized",
+    });
+    expect(provider.transcribe).not.toHaveBeenCalled();
+  });
+
+  it("fails a declaration outside the supported MIME contract before provider dispatch", async () => {
+    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue({
+      ...audio,
+      filename: "meeting.aac",
+      mimeType: "audio/aac",
+      bytes: m4aBytes,
+    });
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+      }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      code: "audio_format_unsupported",
+    });
+    expect(provider.transcribe).not.toHaveBeenCalled();
   });
 
   it("aborts Whisper at the timeout reduced by storage delay", async () => {

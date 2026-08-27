@@ -47,5 +47,14 @@ describe("transcript domain", () => {
     expect(isRetryableTranscriptionFailureCode("storage_object_missing")).toBe(
       false,
     );
+    expect(isRetryableTranscriptionFailureCode("audio_format_mismatch")).toBe(
+      false,
+    );
+    expect(
+      isRetryableTranscriptionFailureCode("audio_format_unsupported"),
+    ).toBe(false);
+    expect(
+      isRetryableTranscriptionFailureCode("audio_format_unrecognized"),
+    ).toBe(false);
   });
 });

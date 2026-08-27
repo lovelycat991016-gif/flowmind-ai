@@ -42,6 +42,7 @@ describe("Supabase production contract", () => {
       "202608170002_fix_claim_next_processing_job_security_definer.sql",
       "202608190001_fix_claim_next_processing_job_ambiguous_columns.sql",
       "202608210001_allow_aliyun_transcript_provider.sql",
+      "202608270001_allow_audio_format_failure_codes.sql",
     ]);
   });
 

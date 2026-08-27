@@ -90,7 +90,7 @@ describe("getRecordingAudioForClaimedJob", () => {
     await expect(
       getRecordingAudioForClaimedJob({ job, maxInputBytes: 10 }),
     ).rejects.toMatchObject({
-      code: "unsupported_audio_type",
+      code: "audio_format_unsupported",
     });
     expect(download).not.toHaveBeenCalled();
   });

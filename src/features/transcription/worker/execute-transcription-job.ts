@@ -3,6 +3,10 @@ import { z } from "zod";
 import type { TranscriptionFailureCode } from "@/entities/transcript/model/transcript";
 import type { TranscriptionProvider } from "@/features/transcription/providers/transcription-provider";
 import { WhisperProviderError } from "@/features/transcription/providers/openai-whisper-provider";
+import {
+  AudioFormatValidationError,
+  validateDeclaredAudioFormat,
+} from "@/features/recordings/audio-format/audio-format-validator";
 import { transcriptionFailureCodeSchema } from "@/features/transcription/schemas/transcription-input";
 
 import { claimNextProcessingJob } from "./claim-processing-job";
@@ -99,6 +103,14 @@ export async function executeNextTranscriptionJob(input: {
       job,
       maxInputBytes: parsed.data.maxInputBytes,
     });
+    const audioFormat = validateDeclaredAudioFormat({
+      bytes: audio.bytes,
+      originalFilename: audio.filename,
+      declaredMimeType: audio.mimeType,
+    });
+    if (audioFormat.validation !== "accepted") {
+      throw new AudioFormatValidationError(audioFormat.failureCode);
+    }
     const deadline = calculateInvocationDeadline({
       nowMs: now(),
       startedAtMs,
