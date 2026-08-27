@@ -60,6 +60,43 @@ describe("ProcessingStatusSection", () => {
     ).toBeVisible();
   });
 
+  it("renders a safe failure alert without exposing the failure code", () => {
+    render(
+      <ProcessingStatusSection
+        processingJob={{
+          ...processingJob,
+          status: "failed",
+          errorMessage: "audio_format_mismatch",
+        }}
+        recording={recording}
+      />,
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("录音格式不一致");
+    expect(alert).toHaveTextContent(
+      "文件内容与文件名或声明的音频类型不一致，请检查原始文件。",
+    );
+    expect(alert).not.toHaveTextContent("audio_format_mismatch");
+    expect(
+      screen.getByRole("status", { name: "AI 处理状态：处理失败" }),
+    ).toBeVisible();
+  });
+
+  it.each(["queued", "running", "completed", "cancelled"] as const)(
+    "does not render a failure alert for %s jobs",
+    (status) => {
+      render(
+        <ProcessingStatusSection
+          processingJob={{ ...processingJob, status }}
+          recording={recording}
+        />,
+      );
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    },
+  );
+
   it("hides the processing section when no recording exists", () => {
     render(
       <ProcessingStatusSection

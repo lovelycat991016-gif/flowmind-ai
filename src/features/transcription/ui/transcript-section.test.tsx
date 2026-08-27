@@ -86,6 +86,30 @@ describe("TranscriptSection", () => {
     expect(screen.getByRole("status")).toHaveTextContent("正在生成转录内容");
   });
 
+  it.each(["failed", "cancelled"] as const)(
+    "keeps the transcript empty state generic for %s jobs",
+    (status) => {
+      render(
+        <TranscriptSection
+          processingJob={{
+            ...processingJob,
+            status,
+            errorMessage: "audio_format_mismatch",
+          }}
+          recording={recording}
+          transcript={null}
+        />,
+      );
+
+      const emptyState = screen.getByRole("status");
+      expect(emptyState).toHaveTextContent("暂无转录内容");
+      expect(emptyState).toHaveTextContent(
+        "录音处理未完成，暂时无法生成转录内容。",
+      );
+      expect(emptyState).not.toHaveTextContent("audio_format_mismatch");
+    },
+  );
+
   it("renders transcript content and an accessible ordered segment list", () => {
     render(
       <TranscriptSection

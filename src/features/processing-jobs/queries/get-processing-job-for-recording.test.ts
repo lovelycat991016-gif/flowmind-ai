@@ -23,8 +23,15 @@ const processingJobRow = {
   },
 };
 
+type ProcessingJobRowFixture = Omit<
+  typeof processingJobRow,
+  "last_error_code"
+> & {
+  last_error_code: string | null;
+};
+
 function processingJobQuery(result: {
-  data: typeof processingJobRow | null;
+  data: ProcessingJobRowFixture | null;
   error: { message: string } | null;
 }) {
   const query = {
@@ -59,6 +66,27 @@ describe("getProcessingJobForRecording", () => {
       "recording_id",
       processingJobRow.recording_id,
     );
+  });
+
+  it("maps the stored failure code without presenting it as user-facing text", async () => {
+    const query = processingJobQuery({
+      data: {
+        ...processingJobRow,
+        status: "failed",
+        last_error_code: "audio_format_mismatch",
+      },
+      error: null,
+    });
+    createClientMock.mockResolvedValue({
+      from: vi.fn().mockReturnValue(query),
+    });
+
+    await expect(
+      getProcessingJobForRecording(processingJobRow.recording_id),
+    ).resolves.toMatchObject({
+      status: "failed",
+      errorMessage: "audio_format_mismatch",
+    });
   });
 
   it("returns null when no processing job exists", async () => {

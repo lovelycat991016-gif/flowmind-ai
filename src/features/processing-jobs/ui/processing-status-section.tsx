@@ -2,6 +2,7 @@ import type { ProcessingJob } from "@/entities/processing-job/model/processing-j
 import type { Recording } from "@/entities/recording/model/recording";
 import { zhCN } from "@/shared/i18n/zh-CN";
 
+import { getProcessingFailurePresentation } from "./processing-failure-presentation";
 import { ProcessingStatusBadge } from "./processing-status-badge";
 
 export function ProcessingStatusSection({
@@ -12,6 +13,11 @@ export function ProcessingStatusSection({
   recording: Recording | null;
 }) {
   if (!recording || !processingJob) return null;
+
+  const failurePresentation =
+    processingJob.status === "failed"
+      ? getProcessingFailurePresentation(processingJob.errorMessage)
+      : null;
 
   return (
     <section
@@ -28,6 +34,16 @@ export function ProcessingStatusSection({
         <p aria-live="polite" className="text-muted-foreground mt-2 text-sm">
           {zhCN.processingJobs.queuedDescription}
         </p>
+      ) : null}
+      {failurePresentation ? (
+        <div className="border-destructive mt-3 border-l-2 pl-3" role="alert">
+          <p className="text-destructive text-sm font-medium">
+            {failurePresentation.title}
+          </p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {failurePresentation.description}
+          </p>
+        </div>
       ) : null}
     </section>
   );
