@@ -31,7 +31,20 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Check formatting
-        run: npm run format:check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin ${{ github.base_ref }} --depth=1
+            FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md')
+
+            if [ -n "$FILES" ]; then
+              echo "$FILES"
+              echo "$FILES" | xargs npx prettier --check
+            else
+              echo "No supported files changed."
+            fi
+          else
+            npm run format:check
+          fi
 
       - name: Lint
         run: npm run lint
