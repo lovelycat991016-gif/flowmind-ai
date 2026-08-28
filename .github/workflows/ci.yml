@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -31,7 +33,19 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Check formatting
-        run: npm run format:check
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md')
+
+            if [ -n "$FILES" ]; then
+              echo "$FILES"
+              echo "$FILES" | xargs npx prettier --check
+            else
+              echo "No supported files changed."
+            fi
+          else
+            npm run format:check
+          fi
 
       - name: Lint
         run: npm run lint

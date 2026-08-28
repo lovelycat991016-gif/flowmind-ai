@@ -319,6 +319,36 @@ export const zhCN = {
     completed: "处理完成",
     failed: "处理失败",
     cancelled: "已取消",
+    failures: {
+      fallback: {
+        title: "转录处理失败",
+        description: "系统未能完成录音转录，请稍后联系管理员。",
+      },
+      audioFormatMismatch: {
+        title: "录音格式不一致",
+        description: "文件内容与文件名或声明的音频类型不一致，请检查原始文件。",
+      },
+      audioFormatUnsupported: {
+        title: "暂不支持此音频格式",
+        description: "该录音的实际音频格式暂不受支持。",
+      },
+      audioFormatUnrecognized: {
+        title: "无法识别录音格式",
+        description: "无法从文件内容识别有效的音频格式，请检查文件是否完整。",
+      },
+      inputTooLarge: {
+        title: "录音文件过大",
+        description: "该录音文件超出了转录服务可处理的大小限制。",
+      },
+      provider: {
+        title: "转录服务暂时不可用",
+        description: "转录服务暂时无法完成处理。",
+      },
+      storage: {
+        title: "无法读取录音文件",
+        description: "系统暂时无法读取已上传的录音文件。",
+      },
+    },
   },
   transcripts: {
     title: "转录内容",
