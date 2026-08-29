@@ -262,12 +262,14 @@ function mapResponse(
 
 export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
   private readonly transport: AliyunAsrTransport;
+  private readonly now: () => number;
 
   constructor(
     private readonly options: {
       appKey: string;
       tokenClient: Pick<AliyunNlsTokenClient, "getToken">;
       transport?: AliyunAsrTransport;
+      now?: () => number;
     },
   ) {
     this.transport =
@@ -279,6 +281,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
           body: request.body,
           signal: request.signal,
         }));
+    this.now = options.now ?? Date.now;
   }
 
   async transcribe(input: TranscriptionRequest) {
@@ -297,7 +300,10 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
 
     let token: string;
     try {
-      token = await this.options.tokenClient.getToken({ signal: input.signal });
+      token = await this.options.tokenClient.getToken({
+        signal: input.signal,
+        correlationId,
+      });
     } catch (error) {
       if (error instanceof AliyunNlsTokenError) {
         throw new AliyunAsrProviderError(error.code);
@@ -318,7 +324,9 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
 
     let response: Response;
     let transportError: unknown;
+    let flashRecognizerFetchLatencyMs: number | undefined;
     try {
+      const fetchDispatchedAtMs = this.now();
       console.info("ALIYUN_ASR_FETCH_DISPATCHED", {
         correlationId,
         endpointHost: url.host,
@@ -332,6 +340,10 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
         body: audioBytes.buffer as ArrayBuffer,
         signal: input.signal,
       });
+      flashRecognizerFetchLatencyMs = Math.max(
+        0,
+        this.now() - fetchDispatchedAtMs,
+      );
     } catch (error) {
       transportError = error;
       console.error("ALIYUN_ASR_REQUEST_FAILED", {
@@ -367,6 +379,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       contentType,
       contentLength: getContentLength(response),
       aborted,
+      flashRecognizerFetchLatencyMs,
     });
     console.info("ALIYUN_ASR_RESPONSE", {
       correlationId,
@@ -392,6 +405,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
     }
 
     let payload: AliyunFlashRecognizerResponse;
+    const responseJsonStartedAtMs = this.now();
     try {
       payload = (await response.json()) as AliyunFlashRecognizerResponse;
     } catch {
@@ -405,13 +419,25 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       });
       throw new AliyunAsrProviderError("provider_request_failed");
     }
+    console.info("ALIYUN_ASR_RESPONSE_JSON_PARSED", {
+      correlationId,
+      responseJsonLatencyMs: Math.max(
+        0,
+        this.now() - responseJsonStartedAtMs,
+      ),
+    });
 
+    const mapResponseStartedAtMs = this.now();
     try {
       const result = mapResponse(payload, input.language);
       console.info("ALIYUN_ASR_TRANSCRIPTION_COMPLETED", {
         correlationId,
         status: response.status,
         transcriptLength: result.content.length,
+        mapResponseLatencyMs: Math.max(
+          0,
+          this.now() - mapResponseStartedAtMs,
+        ),
       });
       return result;
     } catch (error) {

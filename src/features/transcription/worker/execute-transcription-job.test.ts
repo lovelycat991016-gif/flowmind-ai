@@ -122,6 +122,44 @@ describe("executeNextTranscriptionJob", () => {
     });
   });
 
+  it("logs persistence and total worker latency after successful completion", async () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    provider.transcribe.mockResolvedValue(result);
+    const now = vi
+      .fn()
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(200)
+      .mockReturnValueOnce(75_000)
+      .mockReturnValueOnce(75_020)
+      .mockReturnValueOnce(75_025);
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+        now,
+      }),
+    ).resolves.toEqual({ status: "completed", jobId: job.id });
+
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "TRANSCRIPTION_PERSISTENCE_COMPLETED",
+      {
+        correlationId,
+        jobId: job.id,
+        persistenceLatencyMs: 20,
+      },
+    );
+    expect(consoleInfo).toHaveBeenCalledWith("TRANSCRIPTION_WORKER_COMPLETED", {
+      correlationId,
+      jobId: job.id,
+      totalWorkerLatencyMs: 74_925,
+    });
+  });
+
   it("passes mapped FlashRecognizer transcript content and segments to completion persistence", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
     mocks.claimNextProcessingJob.mockResolvedValue(job);

@@ -15,6 +15,36 @@ function response(body: unknown, status = 200) {
 afterEach(() => vi.restoreAllMocks());
 
 describe("AliyunNlsTokenClient", () => {
+  it("logs correlated CreateToken latency without exposing the token", async () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+    const latencyNow = vi
+      .fn()
+      .mockReturnValueOnce(1_000)
+      .mockReturnValueOnce(1_042);
+    const client = new AliyunNlsTokenClient({
+      accessKeyId: "access-key-id",
+      accessKeySecret: "access-key-secret",
+      transport: vi
+        .fn()
+        .mockResolvedValue(response({ Token: { Id: "temporary-token" } })),
+      latencyNow,
+    });
+
+    await expect(
+      client.getToken({ correlationId: "transcription-correlation:latency" }),
+    ).resolves.toBe("temporary-token");
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "ALIYUN_NLS_TOKEN_RESPONSE",
+      expect.objectContaining({
+        correlationId: "transcription-correlation:latency",
+        tokenLatencyMs: 42,
+      }),
+    );
+    expect(JSON.stringify(consoleInfo.mock.calls)).not.toContain(
+      "temporary-token",
+    );
+  });
+
   it("requests and returns a temporary NLS token without exposing credentials", async () => {
     const transport = vi
       .fn()

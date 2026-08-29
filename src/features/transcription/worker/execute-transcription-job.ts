@@ -147,10 +147,21 @@ export async function executeNextTranscriptionJob(input: {
       clearTimeout(timeout);
       controller.signal.removeEventListener("abort", handleAbort);
     }
+    const persistenceStartedAtMs = now();
     await completeTranscriptionJob({
       job,
       workerId: invocationToken,
       result,
+    });
+    console.info("TRANSCRIPTION_PERSISTENCE_COMPLETED", {
+      correlationId,
+      jobId: job.id,
+      persistenceLatencyMs: Math.max(0, now() - persistenceStartedAtMs),
+    });
+    console.info("TRANSCRIPTION_WORKER_COMPLETED", {
+      correlationId,
+      jobId: job.id,
+      totalWorkerLatencyMs: Math.max(0, now() - startedAtMs),
     });
     return { status: "completed" as const, jobId: job.id };
   } catch (error) {

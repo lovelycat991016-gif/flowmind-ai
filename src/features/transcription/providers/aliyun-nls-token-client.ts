@@ -110,6 +110,7 @@ function formatTimestamp(value: Date) {
 export class AliyunNlsTokenClient {
   private readonly transport: AliyunNlsTokenTransport;
   private readonly now: () => Date;
+  private readonly latencyNow: () => number;
   private readonly nonce: () => string;
 
   constructor(
@@ -118,6 +119,7 @@ export class AliyunNlsTokenClient {
       accessKeySecret: string;
       transport?: AliyunNlsTokenTransport;
       now?: () => Date;
+      latencyNow?: () => number;
       nonce?: () => string;
     },
   ) {
@@ -125,10 +127,11 @@ export class AliyunNlsTokenClient {
       options.transport ??
       ((request) => fetch(request.url, { method: "POST", signal: request.signal }));
     this.now = options.now ?? (() => new Date());
+    this.latencyNow = options.latencyNow ?? Date.now;
     this.nonce = options.nonce ?? randomUUID;
   }
 
-  async getToken(input?: { signal?: AbortSignal }) {
+  async getToken(input?: { signal?: AbortSignal; correlationId?: string }) {
     const parameters = {
       AccessKeyId: this.options.accessKeyId,
       Action: "CreateToken",
@@ -149,7 +152,10 @@ export class AliyunNlsTokenClient {
       .update(stringToSign)
       .digest("base64");
 
+    const correlationId = input?.correlationId ?? "unavailable";
+    const tokenStartedAtMs = this.latencyNow();
     console.info("ALIYUN_NLS_TOKEN_REQUEST_STARTED", {
+      correlationId,
       operation: "CreateToken",
       endpointHost: ALIYUN_NLS_TOKEN_HOST,
     });
@@ -171,9 +177,11 @@ export class AliyunNlsTokenClient {
     }
     const contentType = getContentType(response);
     console.info("ALIYUN_NLS_TOKEN_RESPONSE", {
+      correlationId,
       status: response.status,
       contentType,
       ok: response.ok,
+      tokenLatencyMs: Math.max(0, this.latencyNow() - tokenStartedAtMs),
     });
     if (!response.ok) {
       console.error("ALIYUN_NLS_TOKEN_FAILED", {

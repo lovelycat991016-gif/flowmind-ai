@@ -252,6 +252,14 @@ describe("AliyunAsrTranscriptionProvider", () => {
 
   it("logs safe request metadata and completion without exposing the token", async () => {
     const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+    const now = vi
+      .fn()
+      .mockReturnValueOnce(1_000)
+      .mockReturnValueOnce(76_033)
+      .mockReturnValueOnce(76_040)
+      .mockReturnValueOnce(76_044)
+      .mockReturnValueOnce(76_045)
+      .mockReturnValueOnce(76_047);
     const provider = new AliyunAsrTranscriptionProvider({
       appKey: "app-key",
       tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
@@ -274,6 +282,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
           },
         }),
       ),
+      now,
     });
 
     await provider.transcribe(input);
@@ -306,7 +315,15 @@ describe("AliyunAsrTranscriptionProvider", () => {
         contentType: "application/json",
         contentLength: null,
         aborted: false,
+        flashRecognizerFetchLatencyMs: 75_033,
       }),
+    );
+    expect(consoleInfo).toHaveBeenCalledWith(
+      "ALIYUN_ASR_RESPONSE_JSON_PARSED",
+      {
+        correlationId: input.correlationId,
+        responseJsonLatencyMs: 4,
+      },
     );
     expect(consoleInfo).toHaveBeenCalledWith("ALIYUN_ASR_REQUEST_SETTLED", {
       correlationId: input.correlationId,
@@ -321,9 +338,13 @@ describe("AliyunAsrTranscriptionProvider", () => {
         correlationId: input.correlationId,
         status: 200,
         transcriptLength: 15,
+        mapResponseLatencyMs: 2,
       }),
     );
     expect(JSON.stringify(consoleInfo.mock.calls)).not.toContain("temporary-token");
+    expect(JSON.stringify(consoleInfo.mock.calls)).not.toContain(
+      "Safe transcript",
+    );
   });
 
   it("logs a safe ASR HTTP 400 body without exposing reflected secrets", async () => {
