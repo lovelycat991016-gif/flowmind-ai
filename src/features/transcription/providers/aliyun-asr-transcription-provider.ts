@@ -42,11 +42,18 @@ type AliyunSentence = {
   begin_time: number;
   end_time: number;
   text: string;
+  channel_id: number;
 };
 
 type AliyunFlashRecognizerResponse = {
-  result?: string;
-  sentences?: AliyunSentence[];
+  task_id: string;
+  status: number;
+  message: string;
+  flash_result?: {
+    duration: number;
+    completed: boolean;
+    sentences?: AliyunSentence[];
+  };
 };
 
 export class AliyunAsrProviderError extends Error {
@@ -197,12 +204,16 @@ function mapResponse(
   response: AliyunFlashRecognizerResponse,
   language: string | undefined,
 ) {
+  const sentences = response.flash_result?.sentences;
   const result = transcriptionResultSchema.safeParse({
     provider: "aliyun",
     providerModel: "flash-recognizer",
     language: language ?? null,
-    content: response.result?.trim(),
-    segments: response.sentences?.map((sentence, segmentIndex) => ({
+    content: sentences
+      ?.map((sentence) => sentence.text?.trim())
+      .filter(Boolean)
+      .join("\n"),
+    segments: sentences?.map((sentence, segmentIndex) => ({
       segmentIndex,
       startMs: sentence.begin_time,
       endMs: sentence.end_time,

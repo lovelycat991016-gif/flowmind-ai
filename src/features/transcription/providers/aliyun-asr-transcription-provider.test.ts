@@ -25,10 +25,21 @@ describe("AliyunAsrTranscriptionProvider", () => {
     const controller = new AbortController();
     const transport = vi.fn().mockResolvedValue(
       response({
-        result: "Project status is on track.",
-        sentences: [
-          { begin_time: 0, end_time: 1200, text: "Project status is on track." },
-        ],
+        task_id: "task-123",
+        status: 20000000,
+        message: "SUCCESS",
+        flash_result: {
+          duration: 1200,
+          completed: true,
+          sentences: [
+            {
+              begin_time: 0,
+              end_time: 1200,
+              text: "Project status is on track.",
+              channel_id: 0,
+            },
+          ],
+        },
       }),
     );
     const provider = new AliyunAsrTranscriptionProvider({
@@ -66,6 +77,59 @@ describe("AliyunAsrTranscriptionProvider", () => {
     expect(request.headers["Content-Type"]).toBe("application/octet-stream");
     expect(request.headers).not.toHaveProperty("X-NLS-Token");
     expect(request.signal).toBe(controller.signal);
+  });
+
+  it("builds content and segments from FlashRecognizer sentences", async () => {
+    const provider = new AliyunAsrTranscriptionProvider({
+      appKey: "app-key",
+      tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
+      transport: vi.fn().mockResolvedValue(
+        response({
+          task_id: "task-456",
+          status: 20000000,
+          message: "SUCCESS",
+          flash_result: {
+            duration: 2500,
+            completed: true,
+            sentences: [
+              {
+                begin_time: 0,
+                end_time: 1000,
+                text: "First sentence.",
+                channel_id: 0,
+              },
+              {
+                begin_time: 1200,
+                end_time: 2500,
+                text: "Second sentence.",
+                channel_id: 0,
+              },
+            ],
+          },
+        }),
+      ),
+    });
+
+    await expect(provider.transcribe(input)).resolves.toEqual({
+      provider: "aliyun",
+      providerModel: "flash-recognizer",
+      language: "zh",
+      content: "First sentence.\nSecond sentence.",
+      segments: [
+        {
+          segmentIndex: 0,
+          startMs: 0,
+          endMs: 1000,
+          content: "First sentence.",
+        },
+        {
+          segmentIndex: 1,
+          startMs: 1200,
+          endMs: 2500,
+          content: "Second sentence.",
+        },
+      ],
+    });
   });
 
   it("maps caller cancellation to the existing provider timeout code", async () => {
@@ -133,7 +197,18 @@ describe("AliyunAsrTranscriptionProvider", () => {
     const malformedResponse = new AliyunAsrTranscriptionProvider({
       appKey: "app-key",
       tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
-      transport: vi.fn().mockResolvedValue(response({ result: "", sentences: [] })),
+      transport: vi.fn().mockResolvedValue(
+        response({
+          task_id: "task-empty",
+          status: 20000000,
+          message: "SUCCESS",
+          flash_result: {
+            duration: 0,
+            completed: true,
+            sentences: [],
+          },
+        }),
+      ),
     });
 
     await expect(tokenFailure.transcribe(input)).rejects.toMatchObject({
@@ -144,6 +219,37 @@ describe("AliyunAsrTranscriptionProvider", () => {
     });
   });
 
+  it.each([
+    {
+      task_id: "task-missing-result",
+      status: 20000000,
+      message: "SUCCESS",
+    },
+    {
+      task_id: "task-empty-sentences",
+      status: 20000000,
+      message: "SUCCESS",
+      flash_result: {
+        duration: 0,
+        completed: true,
+        sentences: [],
+      },
+    },
+  ])(
+    "fails safely when FlashRecognizer has no usable sentences",
+    async (body) => {
+      const provider = new AliyunAsrTranscriptionProvider({
+        appKey: "app-key",
+        tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
+        transport: vi.fn().mockResolvedValue(response(body)),
+      });
+
+      await expect(provider.transcribe(input)).rejects.toMatchObject({
+        code: "provider_request_failed",
+      });
+    },
+  );
+
   it("logs safe request metadata and completion without exposing the token", async () => {
     const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
     const provider = new AliyunAsrTranscriptionProvider({
@@ -151,8 +257,21 @@ describe("AliyunAsrTranscriptionProvider", () => {
       tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
       transport: vi.fn().mockResolvedValue(
         response({
-          result: "Safe transcript",
-          sentences: [{ begin_time: 0, end_time: 1, text: "Safe transcript" }],
+          task_id: "task-safe-log",
+          status: 20000000,
+          message: "SUCCESS",
+          flash_result: {
+            duration: 1,
+            completed: true,
+            sentences: [
+              {
+                begin_time: 0,
+                end_time: 1,
+                text: "Safe transcript",
+                channel_id: 0,
+              },
+            ],
+          },
         }),
       ),
     });
@@ -265,7 +384,18 @@ describe("AliyunAsrTranscriptionProvider", () => {
     const missingResult = new AliyunAsrTranscriptionProvider({
       appKey: "app-key",
       tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
-      transport: vi.fn().mockResolvedValue(response({ sentences: [] })),
+      transport: vi.fn().mockResolvedValue(
+        response({
+          task_id: "task-invalid",
+          status: 20000000,
+          message: "SUCCESS",
+          flash_result: {
+            duration: 0,
+            completed: true,
+            sentences: [],
+          },
+        }),
+      ),
     });
 
     await expect(invalidJson.transcribe(input)).rejects.toMatchObject({
@@ -289,7 +419,7 @@ describe("AliyunAsrTranscriptionProvider", () => {
       expect.objectContaining({
         correlationId: input.correlationId,
         status: 200,
-        resultKeys: ["sentences"],
+        resultKeys: ["task_id", "status", "message", "flash_result"],
         safeSummary: "missing_valid_transcript",
       }),
     );
