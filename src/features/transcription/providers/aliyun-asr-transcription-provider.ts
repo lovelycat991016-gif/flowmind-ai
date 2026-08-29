@@ -98,6 +98,40 @@ function getSafeResultKeys(value: unknown) {
     .slice(0, 20);
 }
 
+function getSafeValueType(value: unknown) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "array";
+  return typeof value;
+}
+
+function getSafeFlashResultDiagnostic(payload: unknown) {
+  const flashResult =
+    payload &&
+    typeof payload === "object" &&
+    !Array.isArray(payload) &&
+    "flash_result" in payload
+      ? payload.flash_result
+      : undefined;
+  const isFlashResultObject =
+    flashResult !== null &&
+    typeof flashResult === "object" &&
+    !Array.isArray(flashResult);
+  const flashResultHasSentences =
+    isFlashResultObject && "sentences" in flashResult;
+  const sentences = flashResultHasSentences
+    ? flashResult.sentences
+    : undefined;
+  const sentenceArray = Array.isArray(sentences) ? sentences : null;
+
+  return {
+    flashResultType: getSafeValueType(flashResult),
+    flashResultKeys: getSafeResultKeys(flashResult),
+    flashResultHasSentences,
+    flashResultSentenceCount: sentenceArray?.length ?? null,
+    firstSentenceKeys: getSafeResultKeys(sentenceArray?.[0]),
+  };
+}
+
 function getFileExtension(filename: string) {
   const extension = filename.match(/\.([A-Za-z0-9]{1,16})$/)?.[1];
   return extension?.toLowerCase() ?? null;
@@ -382,6 +416,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
       return result;
     } catch (error) {
       if (error instanceof AliyunAsrProviderError) {
+        const flashResultDiagnostic = getSafeFlashResultDiagnostic(payload);
         console.error("ALIYUN_ASR_INVALID_RESULT", {
           correlationId,
           status: response.status,
@@ -389,6 +424,7 @@ export class AliyunAsrTranscriptionProvider implements TranscriptionProvider {
           errorName: "InvalidAsrResult",
           errorSummary: "missing_valid_transcript",
           resultKeys: getSafeResultKeys(payload),
+          ...flashResultDiagnostic,
           safeSummary: "missing_valid_transcript",
         });
         throw error;

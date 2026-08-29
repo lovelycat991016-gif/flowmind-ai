@@ -390,9 +390,16 @@ describe("AliyunAsrTranscriptionProvider", () => {
           status: 20000000,
           message: "SUCCESS",
           flash_result: {
-            duration: 0,
+            duration: 100,
             completed: true,
-            sentences: [],
+            sentences: [
+              {
+                begin_time: 100,
+                end_time: 0,
+                text: "sensitive transcript content",
+                channel_id: 0,
+              },
+            ],
           },
         }),
       ),
@@ -420,11 +427,85 @@ describe("AliyunAsrTranscriptionProvider", () => {
         correlationId: input.correlationId,
         status: 200,
         resultKeys: ["task_id", "status", "message", "flash_result"],
+        flashResultType: "object",
+        flashResultKeys: ["duration", "completed", "sentences"],
+        flashResultHasSentences: true,
+        flashResultSentenceCount: 1,
+        firstSentenceKeys: [
+          "begin_time",
+          "end_time",
+          "text",
+          "channel_id",
+        ],
         safeSummary: "missing_valid_transcript",
       }),
     );
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain("secret-token");
+    expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+      "sensitive transcript content",
+    );
   });
+
+  it.each([
+    {
+      label: "undefined",
+      body: {
+        task_id: "task-no-flash-result",
+        status: 20000000,
+        message: "SUCCESS",
+      },
+      expectedType: "undefined",
+    },
+    {
+      label: "null",
+      body: {
+        task_id: "task-null-flash-result",
+        status: 20000000,
+        message: "SUCCESS",
+        flash_result: null,
+      },
+      expectedType: "null",
+    },
+    {
+      label: "non-object",
+      body: {
+        task_id: "task-string-flash-result",
+        status: 20000000,
+        message: "SUCCESS",
+        flash_result: "sensitive transcript content",
+      },
+      expectedType: "string",
+    },
+  ])(
+    "logs safe flash_result diagnostics when it is $label",
+    async ({ body, expectedType }) => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      const provider = new AliyunAsrTranscriptionProvider({
+        appKey: "app-key",
+        tokenClient: { getToken: vi.fn().mockResolvedValue("temporary-token") },
+        transport: vi.fn().mockResolvedValue(response(body)),
+      });
+
+      await expect(provider.transcribe(input)).rejects.toMatchObject({
+        code: "provider_request_failed",
+      });
+      expect(consoleError).toHaveBeenCalledWith(
+        "ALIYUN_ASR_INVALID_RESULT",
+        expect.objectContaining({
+          flashResultType: expectedType,
+          flashResultKeys: [],
+          flashResultHasSentences: false,
+          flashResultSentenceCount: null,
+          firstSentenceKeys: [],
+        }),
+      );
+      expect(JSON.stringify(consoleError.mock.calls)).not.toContain(
+        "sensitive transcript content",
+      );
+    },
+  );
 
   it("records a non-JSON FlashRecognizer response without logging its body", async () => {
     const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
