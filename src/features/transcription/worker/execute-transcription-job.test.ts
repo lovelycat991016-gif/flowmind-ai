@@ -47,6 +47,12 @@ const job = {
   leaseExpiresAt: "2026-07-20T08:05:00.000Z",
 };
 
+const secondJob = {
+  ...job,
+  id: "1eed9e63-1615-4e16-9ce5-a56384209c25",
+  recordingId: "248d6c15-fc45-4037-bda3-0f25d9e18414",
+};
+
 const audio = {
   recording: {},
   filename: "weekly-sync.webm",
@@ -71,8 +77,30 @@ const result = {
 
 const provider = { transcribe: vi.fn() };
 
+function queueJobs(...jobs: (typeof job)[]) {
+  for (const queuedJob of jobs) {
+    mocks.claimNextProcessingJob.mockResolvedValueOnce(queuedJob);
+  }
+  mocks.claimNextProcessingJob.mockResolvedValueOnce(null);
+}
+
+function processedResult(
+  jobs: Array<
+    | { status: "completed"; jobId: string }
+    | { status: "failed"; jobId: string; code: string }
+  >,
+  stopReason: "queue_empty" | "budget_exhausted" = "queue_empty",
+) {
+  return { status: "processed", jobs, stopReason };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.claimNextProcessingJob.mockReset();
+  mocks.getRecordingAudioForClaimedJob.mockReset();
+  mocks.completeTranscriptionJob.mockReset();
+  mocks.failTranscriptionJob.mockReset();
+  provider.transcribe.mockReset();
   mocks.completeTranscriptionJob.mockResolvedValue(undefined);
   mocks.failTranscriptionJob.mockResolvedValue(undefined);
   mocks.createInvocationToken.mockImplementation((workerRole: string) =>
@@ -87,10 +115,16 @@ afterEach(() => {
 });
 
 describe("executeNextTranscriptionJob", () => {
-  it("claims one job, transcribes its private audio, and persists the completed transcript", async () => {
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
+  it("claims, transcribes, and persists two queued jobs before the queue becomes empty", async () => {
+    let currentTimeMs = 0;
+    queueJobs(job, secondJob);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
     provider.transcribe.mockResolvedValue(result);
+    mocks.completeTranscriptionJob
+      .mockImplementationOnce(async () => {
+        currentTimeMs = 75_000;
+      })
+      .mockResolvedValueOnce(undefined);
 
     await expect(
       executeNextTranscriptionJob({
@@ -98,42 +132,42 @@ describe("executeNextTranscriptionJob", () => {
         leaseSeconds: 300,
         maxInputBytes: 1_000,
         provider,
+        now: () => currentTimeMs,
       }),
-    ).resolves.toEqual({ status: "completed", jobId: job.id });
+    ).resolves.toEqual(
+      processedResult([
+        { status: "completed", jobId: job.id },
+        { status: "completed", jobId: secondJob.id },
+      ]),
+    );
+    expect(mocks.claimNextProcessingJob).toHaveBeenCalledTimes(3);
     expect(mocks.claimNextProcessingJob).toHaveBeenCalledWith({
       workerId: invocationToken,
       leaseSeconds: 300,
     });
-    expect(mocks.getRecordingAudioForClaimedJob).toHaveBeenCalledWith({
+    expect(mocks.getRecordingAudioForClaimedJob).toHaveBeenNthCalledWith(1, {
       job,
       maxInputBytes: 1_000,
     });
-    expect(provider.transcribe).toHaveBeenCalledWith({
-      filename: audio.filename,
-      mimeType: audio.mimeType,
-      bytes: audio.bytes,
-      correlationId,
-      signal: expect.any(AbortSignal),
+    expect(mocks.getRecordingAudioForClaimedJob).toHaveBeenNthCalledWith(2, {
+      job: secondJob,
+      maxInputBytes: 1_000,
     });
-    expect(mocks.completeTranscriptionJob).toHaveBeenCalledWith({
+    expect(provider.transcribe).toHaveBeenCalledTimes(2);
+    expect(mocks.completeTranscriptionJob).toHaveBeenNthCalledWith(1, {
       job,
+      workerId: invocationToken,
+      result,
+    });
+    expect(mocks.completeTranscriptionJob).toHaveBeenNthCalledWith(2, {
+      job: secondJob,
       workerId: invocationToken,
       result,
     });
   });
 
-  it("logs persistence and total worker latency after successful completion", async () => {
-    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
-    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
-    provider.transcribe.mockResolvedValue(result);
-    const now = vi
-      .fn()
-      .mockReturnValueOnce(100)
-      .mockReturnValueOnce(200)
-      .mockReturnValueOnce(75_000)
-      .mockReturnValueOnce(75_020)
-      .mockReturnValueOnce(75_025);
+  it("does not claim when the positive provider window is smaller than the full provider cap", async () => {
+    const now = vi.fn().mockReturnValueOnce(0).mockReturnValue(75_001);
 
     await expect(
       executeNextTranscriptionJob({
@@ -143,7 +177,170 @@ describe("executeNextTranscriptionJob", () => {
         provider,
         now,
       }),
-    ).resolves.toEqual({ status: "completed", jobId: job.id });
+    ).resolves.toEqual({
+      status: "idle",
+      stopReason: "budget_exhausted",
+    });
+    expect(mocks.claimNextProcessingJob).not.toHaveBeenCalled();
+    expect(mocks.failTranscriptionJob).not.toHaveBeenCalled();
+  });
+
+  it("claims when the full provider cap and terminal reserve remain", async () => {
+    const now = vi.fn().mockReturnValueOnce(0).mockReturnValue(75_000);
+    queueJobs(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    provider.transcribe.mockResolvedValue(result);
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+        now,
+      }),
+    ).resolves.toEqual(
+      processedResult([{ status: "completed", jobId: job.id }]),
+    );
+    expect(mocks.claimNextProcessingJob).toHaveBeenCalledTimes(2);
+  });
+
+  it("continues with the next queued job after persisting a failure", async () => {
+    queueJobs(job, secondJob);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    provider.transcribe
+      .mockRejectedValueOnce(new WhisperProviderError("provider_rate_limited"))
+      .mockResolvedValueOnce(result);
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+      }),
+    ).resolves.toEqual(
+      processedResult([
+        {
+          status: "failed",
+          jobId: job.id,
+          code: "provider_rate_limited",
+        },
+        { status: "completed", jobId: secondJob.id },
+      ]),
+    );
+    expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
+      job,
+      workerId: invocationToken,
+      code: "provider_rate_limited",
+    });
+    expect(mocks.completeTranscriptionJob).toHaveBeenCalledWith({
+      job: secondJob,
+      workerId: invocationToken,
+      result,
+    });
+  });
+
+  it("stops before another claim after a safely claimed provider subsequently times out", async () => {
+    vi.useFakeTimers();
+    let currentTimeMs = 0;
+    queueJobs(job, secondJob);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    provider.transcribe
+      .mockImplementationOnce(({ signal }: { signal?: AbortSignal }) =>
+        new Promise((_, reject) => {
+          signal?.addEventListener("abort", () =>
+            reject(new WhisperProviderError("provider_timeout")),
+          );
+        }),
+      )
+      .mockResolvedValueOnce(result);
+
+    const execution = executeNextTranscriptionJob({
+      workerId,
+      leaseSeconds: 300,
+      maxInputBytes: 1_000,
+      provider,
+      now: () => currentTimeMs,
+    });
+
+    currentTimeMs = 120_000;
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    await expect(execution).resolves.toEqual(
+      processedResult(
+        [
+          {
+            status: "failed",
+            jobId: job.id,
+            code: "provider_timeout",
+          },
+        ],
+        "budget_exhausted",
+      ),
+    );
+    expect(mocks.claimNextProcessingJob).toHaveBeenCalledOnce();
+    expect(provider.transcribe).toHaveBeenCalledOnce();
+  });
+
+  it("does not claim another job when a completed job leaves a positive but unsafe provider window", async () => {
+    let currentTimeMs = 0;
+    mocks.claimNextProcessingJob.mockResolvedValueOnce(job);
+    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    provider.transcribe.mockResolvedValue(result);
+    mocks.completeTranscriptionJob.mockImplementation(async () => {
+      currentTimeMs = 75_001;
+    });
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+        now: () => currentTimeMs,
+      }),
+    ).resolves.toEqual(
+      processedResult(
+        [{ status: "completed", jobId: job.id }],
+        "budget_exhausted",
+      ),
+    );
+    expect(mocks.claimNextProcessingJob).toHaveBeenCalledOnce();
+  });
+
+  it("logs persistence and total worker latency after successful completion", async () => {
+    const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
+    let currentTimeMs = 100;
+    mocks.claimNextProcessingJob
+      .mockResolvedValueOnce(job)
+      .mockImplementationOnce(async () => {
+        currentTimeMs = 74_025;
+        return null;
+      });
+    mocks.getRecordingAudioForClaimedJob.mockImplementation(async () => {
+      currentTimeMs = 200;
+      return audio;
+    });
+    provider.transcribe.mockImplementation(async () => {
+      currentTimeMs = 74_000;
+      return result;
+    });
+    mocks.completeTranscriptionJob.mockImplementation(async () => {
+      currentTimeMs = 74_020;
+    });
+
+    await expect(
+      executeNextTranscriptionJob({
+        workerId,
+        leaseSeconds: 300,
+        maxInputBytes: 1_000,
+        provider,
+        now: () => currentTimeMs,
+      }),
+    ).resolves.toEqual(
+      processedResult([{ status: "completed", jobId: job.id }]),
+    );
 
     expect(consoleInfo).toHaveBeenCalledWith(
       "TRANSCRIPTION_PERSISTENCE_COMPLETED",
@@ -156,13 +353,15 @@ describe("executeNextTranscriptionJob", () => {
     expect(consoleInfo).toHaveBeenCalledWith("TRANSCRIPTION_WORKER_COMPLETED", {
       correlationId,
       jobId: job.id,
-      totalWorkerLatencyMs: 74_925,
+      processedJobCount: 1,
+      stopReason: "queue_empty",
+      totalWorkerLatencyMs: 73_925,
     });
   });
 
   it("passes mapped FlashRecognizer transcript content and segments to completion persistence", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    queueJobs(job);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue({
       ...audio,
       filename: "临猗县图书馆-real.mp3",
@@ -212,7 +411,9 @@ describe("executeNextTranscriptionJob", () => {
         maxInputBytes: 2_000_000,
         provider: aliyunProvider,
       }),
-    ).resolves.toEqual({ status: "completed", jobId: job.id });
+    ).resolves.toEqual(
+      processedResult([{ status: "completed", jobId: job.id }]),
+    );
 
     expect(mocks.completeTranscriptionJob).toHaveBeenCalledWith({
       job,
@@ -241,8 +442,12 @@ describe("executeNextTranscriptionJob", () => {
   });
 
   it("does not start Whisper after storage consumes the terminal persistence reserve", async () => {
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
-    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    let currentTimeMs = 0;
+    mocks.claimNextProcessingJob.mockResolvedValueOnce(job);
+    mocks.getRecordingAudioForClaimedJob.mockImplementation(async () => {
+      currentTimeMs = 195_000;
+      return audio;
+    });
 
     await expect(
       executeNextTranscriptionJob({
@@ -250,14 +455,16 @@ describe("executeNextTranscriptionJob", () => {
         leaseSeconds: 300,
         maxInputBytes: 1_000,
         provider,
-        now: vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(195_000),
+        now: () => currentTimeMs,
       }),
-    ).resolves.toEqual({
-      status: "failed",
-      jobId: job.id,
-      code: "provider_timeout",
-    });
+    ).resolves.toEqual(
+      processedResult(
+        [{ status: "failed", jobId: job.id, code: "provider_timeout" }],
+        "budget_exhausted",
+      ),
+    );
 
+    expect(mocks.claimNextProcessingJob).toHaveBeenCalledOnce();
     expect(provider.transcribe).not.toHaveBeenCalled();
     expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
       job,
@@ -268,7 +475,7 @@ describe("executeNextTranscriptionJob", () => {
 
   it("fails a declared MP3 containing M4A bytes before Aliyun token or transport dispatch", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    queueJobs(job);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue({
       ...audio,
       filename: "王村小学.mp3",
@@ -290,11 +497,15 @@ describe("executeNextTranscriptionJob", () => {
         maxInputBytes: 2_000_000,
         provider: aliyunProvider,
       }),
-    ).resolves.toEqual({
-      status: "failed",
-      jobId: job.id,
-      code: "audio_format_mismatch",
-    });
+    ).resolves.toEqual(
+      processedResult([
+        {
+          status: "failed",
+          jobId: job.id,
+          code: "audio_format_mismatch",
+        },
+      ]),
+    );
 
     expect(getToken).not.toHaveBeenCalled();
     expect(transport).not.toHaveBeenCalled();
@@ -310,7 +521,7 @@ describe("executeNextTranscriptionJob", () => {
   });
 
   it("fails unknown bytes before provider dispatch", async () => {
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    queueJobs(job);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue({
       ...audio,
       filename: "unknown.mp3",
@@ -325,15 +536,20 @@ describe("executeNextTranscriptionJob", () => {
         maxInputBytes: 1_000,
         provider,
       }),
-    ).resolves.toMatchObject({
-      status: "failed",
-      code: "audio_format_unrecognized",
-    });
+    ).resolves.toEqual(
+      processedResult([
+        {
+          status: "failed",
+          jobId: job.id,
+          code: "audio_format_unrecognized",
+        },
+      ]),
+    );
     expect(provider.transcribe).not.toHaveBeenCalled();
   });
 
   it("fails a declaration outside the supported MIME contract before provider dispatch", async () => {
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    queueJobs(job);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue({
       ...audio,
       filename: "meeting.aac",
@@ -348,10 +564,15 @@ describe("executeNextTranscriptionJob", () => {
         maxInputBytes: 1_000,
         provider,
       }),
-    ).resolves.toMatchObject({
-      status: "failed",
-      code: "audio_format_unsupported",
-    });
+    ).resolves.toEqual(
+      processedResult([
+        {
+          status: "failed",
+          jobId: job.id,
+          code: "audio_format_unsupported",
+        },
+      ]),
+    );
     expect(provider.transcribe).not.toHaveBeenCalled();
   });
 
@@ -359,8 +580,12 @@ describe("executeNextTranscriptionJob", () => {
     vi.useFakeTimers();
     const consoleInfo = vi.spyOn(console, "info").mockImplementation(() => {});
     const addEventListener = vi.spyOn(AbortSignal.prototype, "addEventListener");
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
-    mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
+    let currentTimeMs = 0;
+    mocks.claimNextProcessingJob.mockResolvedValueOnce(job);
+    mocks.getRecordingAudioForClaimedJob.mockImplementation(async () => {
+      currentTimeMs = 180_000;
+      return audio;
+    });
     provider.transcribe.mockImplementation(({ signal }: { signal?: AbortSignal }) =>
       new Promise((_, reject) => {
         signal?.addEventListener("abort", () =>
@@ -374,20 +599,20 @@ describe("executeNextTranscriptionJob", () => {
       leaseSeconds: 300,
       maxInputBytes: 1_000,
       provider,
-      now: vi
-        .fn()
-        .mockReturnValueOnce(0)
-        .mockReturnValueOnce(180_000)
-        .mockReturnValueOnce(195_000),
+      now: () => currentTimeMs,
     });
 
+    await vi.advanceTimersByTimeAsync(0);
+    currentTimeMs = 195_000;
     await vi.advanceTimersByTimeAsync(15_000);
 
-    await expect(execution).resolves.toEqual({
-      status: "failed",
-      jobId: job.id,
-      code: "provider_timeout",
-    });
+    await expect(execution).resolves.toEqual(
+      processedResult(
+        [{ status: "failed", jobId: job.id, code: "provider_timeout" }],
+        "budget_exhausted",
+      ),
+    );
+    expect(mocks.claimNextProcessingJob).toHaveBeenCalledOnce();
     expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
       job,
       workerId: invocationToken,
@@ -448,7 +673,7 @@ describe("executeNextTranscriptionJob", () => {
 
   it("records a safe provider failure for the claimed job without exposing provider detail", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    queueJobs(job);
     mocks.getRecordingAudioForClaimedJob.mockResolvedValue(audio);
     provider.transcribe.mockRejectedValue(
       new WhisperProviderError("provider_rate_limited"),
@@ -461,11 +686,15 @@ describe("executeNextTranscriptionJob", () => {
         maxInputBytes: 1_000,
         provider,
       }),
-    ).resolves.toEqual({
-      status: "failed",
-      jobId: job.id,
-      code: "provider_rate_limited",
-    });
+    ).resolves.toEqual(
+      processedResult([
+        {
+          status: "failed",
+          jobId: job.id,
+          code: "provider_rate_limited",
+        },
+      ]),
+    );
     expect(mocks.failTranscriptionJob).toHaveBeenCalledWith({
       job,
       workerId: invocationToken,
@@ -483,7 +712,7 @@ describe("executeNextTranscriptionJob", () => {
 
   it("returns a generic error when failure persistence cannot release a claimed job", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    mocks.claimNextProcessingJob.mockResolvedValue(job);
+    mocks.claimNextProcessingJob.mockResolvedValueOnce(job);
     mocks.getRecordingAudioForClaimedJob.mockRejectedValue(
       new Error("unexpected storage implementation detail"),
     );

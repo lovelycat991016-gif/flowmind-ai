@@ -10,6 +10,7 @@ import {
 import { transcriptionFailureCodeSchema } from "@/features/transcription/schemas/transcription-input";
 
 import { claimNextProcessingJob } from "./claim-processing-job";
+import type { ClaimedProcessingJob } from "./claim-processing-job";
 import { getRecordingAudioForClaimedJob } from "./recording-source";
 import {
   completeTranscriptionJob,
@@ -63,45 +64,54 @@ function getSafeFailureCode(error: unknown): TranscriptionFailureCode {
   return "worker_unexpected_error";
 }
 
-export async function executeNextTranscriptionJob(input: {
-  workerId: string;
-  leaseSeconds: number;
+type ProcessedJobResult =
+  | { status: "completed"; jobId: string }
+  | { status: "failed"; jobId: string; code: TranscriptionFailureCode };
+
+type BatchStopReason = "queue_empty" | "budget_exhausted";
+
+function getInvocationDeadline(input: {
+  now: () => number;
+  startedAtMs: number;
+}) {
+  return calculateInvocationDeadline({
+    nowMs: input.now(),
+    startedAtMs: input.startedAtMs,
+    budgetMs: TRANSCRIPTION_EXECUTION_BUDGET_MS,
+    terminalReserveMs: TRANSCRIPTION_TERMINAL_RESERVE_MS,
+    providerCapMs: WHISPER_TIMEOUT_CAP_MS,
+  });
+}
+
+function hasSafeClaimBudget(
+  deadline: ReturnType<typeof getInvocationDeadline>,
+) {
+  return deadline.providerTimeoutMs === WHISPER_TIMEOUT_CAP_MS;
+}
+
+async function processClaimedJob(input: {
+  job: ClaimedProcessingJob;
+  invocationToken: string;
+  correlationId: string;
   maxInputBytes: number;
   provider: TranscriptionProvider;
-  now?: () => number;
-}) {
-  const parsed = executionInputSchema.safeParse(input);
-  if (!parsed.success || typeof input.provider.transcribe !== "function") {
-    throw new Error("Unable to execute transcription job.");
-  }
-
-  const correlationId = createInvocationToken("transcription-correlation");
-  const invocationToken = createInvocationToken(parsed.data.workerId);
-  const now = input.now ?? Date.now;
-  const startedAtMs = now();
-
-  let job;
-  try {
-    job = await claimNextProcessingJob({
-      workerId: invocationToken,
-      leaseSeconds: parsed.data.leaseSeconds,
-    });
-  } catch (error) {
-    console.error("CLAIM_TRANSCRIPTION_JOB_FAILED", {
-      error: safeErrorDiagnostic(error),
-    });
-    throw new Error("Unable to execute transcription job.");
-  }
-
-  if (!job) return { status: "idle" as const };
-  if (job.lockedBy !== invocationToken) {
-    throw new Error("Unable to execute transcription job.");
-  }
+  now: () => number;
+  startedAtMs: number;
+}): Promise<ProcessedJobResult> {
+  const {
+    job,
+    invocationToken,
+    correlationId,
+    maxInputBytes,
+    provider,
+    now,
+    startedAtMs,
+  } = input;
 
   try {
     const audio = await getRecordingAudioForClaimedJob({
       job,
-      maxInputBytes: parsed.data.maxInputBytes,
+      maxInputBytes,
     });
     const audioFormat = validateDeclaredAudioFormat({
       bytes: audio.bytes,
@@ -111,13 +121,7 @@ export async function executeNextTranscriptionJob(input: {
     if (audioFormat.validation !== "accepted") {
       throw new AudioFormatValidationError(audioFormat.failureCode);
     }
-    const deadline = calculateInvocationDeadline({
-      nowMs: now(),
-      startedAtMs,
-      budgetMs: TRANSCRIPTION_EXECUTION_BUDGET_MS,
-      terminalReserveMs: TRANSCRIPTION_TERMINAL_RESERVE_MS,
-      providerCapMs: WHISPER_TIMEOUT_CAP_MS,
-    });
+    const deadline = getInvocationDeadline({ now, startedAtMs });
     if (!deadline.providerAllowed) {
       throw new WhisperProviderError("provider_timeout");
     }
@@ -136,7 +140,7 @@ export async function executeNextTranscriptionJob(input: {
     );
     let result;
     try {
-      result = await input.provider.transcribe({
+      result = await provider.transcribe({
         filename: audio.filename,
         mimeType: audio.mimeType,
         bytes: audio.bytes,
@@ -158,12 +162,7 @@ export async function executeNextTranscriptionJob(input: {
       jobId: job.id,
       persistenceLatencyMs: Math.max(0, now() - persistenceStartedAtMs),
     });
-    console.info("TRANSCRIPTION_WORKER_COMPLETED", {
-      correlationId,
-      jobId: job.id,
-      totalWorkerLatencyMs: Math.max(0, now() - startedAtMs),
-    });
-    return { status: "completed" as const, jobId: job.id };
+    return { status: "completed", jobId: job.id };
   } catch (error) {
     const code = getSafeFailureCode(error);
     console.error("TRANSCRIPTION_WORKER_FAILED", {
@@ -185,6 +184,83 @@ export async function executeNextTranscriptionJob(input: {
       throw new Error("Unable to execute transcription job.");
     }
 
-    return { status: "failed" as const, jobId: job.id, code };
+    return { status: "failed", jobId: job.id, code };
   }
+}
+
+export async function executeNextTranscriptionJob(input: {
+  workerId: string;
+  leaseSeconds: number;
+  maxInputBytes: number;
+  provider: TranscriptionProvider;
+  now?: () => number;
+}) {
+  const parsed = executionInputSchema.safeParse(input);
+  if (!parsed.success || typeof input.provider.transcribe !== "function") {
+    throw new Error("Unable to execute transcription job.");
+  }
+
+  const correlationId = createInvocationToken("transcription-correlation");
+  const invocationToken = createInvocationToken(parsed.data.workerId);
+  const now = input.now ?? Date.now;
+  const startedAtMs = now();
+  const jobs: ProcessedJobResult[] = [];
+  let stopReason: BatchStopReason = "budget_exhausted";
+  let safeToClaim = hasSafeClaimBudget(
+    getInvocationDeadline({ now, startedAtMs }),
+  );
+
+  while (safeToClaim) {
+    let job;
+    try {
+      job = await claimNextProcessingJob({
+        workerId: invocationToken,
+        leaseSeconds: parsed.data.leaseSeconds,
+      });
+    } catch (error) {
+      console.error("CLAIM_TRANSCRIPTION_JOB_FAILED", {
+        error: safeErrorDiagnostic(error),
+      });
+      throw new Error("Unable to execute transcription job.");
+    }
+
+    if (!job) {
+      stopReason = "queue_empty";
+      break;
+    }
+    if (job.lockedBy !== invocationToken) {
+      throw new Error("Unable to execute transcription job.");
+    }
+
+    jobs.push(
+      await processClaimedJob({
+        job,
+        invocationToken,
+        correlationId,
+        maxInputBytes: parsed.data.maxInputBytes,
+        provider: input.provider,
+        now,
+        startedAtMs,
+      }),
+    );
+    safeToClaim = hasSafeClaimBudget(
+      getInvocationDeadline({ now, startedAtMs }),
+    );
+  }
+
+  if (jobs.length === 0) {
+    return stopReason === "budget_exhausted"
+      ? { status: "idle" as const, stopReason }
+      : { status: "idle" as const };
+  }
+
+  const lastProcessedJob = jobs[jobs.length - 1];
+  console.info("TRANSCRIPTION_WORKER_COMPLETED", {
+    correlationId,
+    jobId: lastProcessedJob.jobId,
+    processedJobCount: jobs.length,
+    stopReason,
+    totalWorkerLatencyMs: Math.max(0, now() - startedAtMs),
+  });
+  return { status: "processed" as const, jobs, stopReason };
 }
