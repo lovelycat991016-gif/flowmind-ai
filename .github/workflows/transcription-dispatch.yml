@@ -1,0 +1,109 @@
+name: Transcription dispatch
+
+on:
+  schedule:
+    - cron: "2/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: transcription-dispatch-production
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Wake transcription worker
+        shell: bash
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${CRON_SECRET:-}" ]]; then
+            echo "::error::CRON_SECRET is not configured"
+            exit 1
+          fi
+
+          endpoint="https://flowmind-ai-liard.vercel.app/api/cron/transcription"
+          max_attempts=2
+          backoff_seconds=45
+
+          echo "Transcription dispatch started"
+
+          for attempt in 1 2; do
+            started_at_ms="$(date +%s%3N)"
+
+            set +e
+            http_status="$(
+              curl \
+                --silent \
+                --output /dev/null \
+                --write-out "%{http_code}" \
+                --request GET \
+                --proto "=https" \
+                --max-time 300 \
+                --retry 0 \
+                --header "Accept: application/json" \
+                --header "Authorization: Bearer ${CRON_SECRET}" \
+                "${endpoint}"
+            )"
+            curl_exit_code=$?
+            set -e
+
+            finished_at_ms="$(date +%s%3N)"
+            latency_ms=$((finished_at_ms - started_at_ms))
+
+            if ((curl_exit_code != 0)); then
+              if ((curl_exit_code == 28)); then
+                transport_status="timeout"
+              else
+                transport_status="network_failure"
+              fi
+
+              echo "attempt=${attempt} status=${transport_status} latency_ms=${latency_ms}"
+              if ((attempt < max_attempts)); then
+                echo "attempt=${attempt} retry=true backoff_seconds=${backoff_seconds}"
+                sleep "${backoff_seconds}"
+                continue
+              fi
+
+              echo "::error::Transcription dispatch failed after ${attempt} attempts"
+              exit 1
+            fi
+
+            echo "attempt=${attempt} status=${http_status} latency_ms=${latency_ms}"
+
+            case "${http_status}" in
+              2??)
+                echo "Transcription dispatch completed"
+                exit 0
+                ;;
+              401 | 403)
+                echo "::error::Transcription dispatch configuration failure status=${http_status}"
+                exit 1
+                ;;
+              408 | 429 | 5??)
+                if ((attempt < max_attempts)); then
+                  echo "attempt=${attempt} retry=true backoff_seconds=${backoff_seconds}"
+                  sleep "${backoff_seconds}"
+                  continue
+                fi
+
+                echo "::error::Transcription dispatch retry exhausted status=${http_status}"
+                exit 1
+                ;;
+              4??)
+                echo "::error::Transcription dispatch non-retryable failure status=${http_status}"
+                exit 1
+                ;;
+              *)
+                echo "::error::Transcription dispatch unexpected status=${http_status}"
+                exit 1
+                ;;
+            esac
+          done
