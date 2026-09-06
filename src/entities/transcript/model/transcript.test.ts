@@ -41,20 +41,25 @@ describe("transcript domain", () => {
   });
 
   it("classifies only transient failure codes as retryable", () => {
-    expect(isRetryableTranscriptionFailureCode("provider_rate_limited")).toBe(
-      true,
-    );
-    expect(isRetryableTranscriptionFailureCode("storage_object_missing")).toBe(
-      false,
-    );
-    expect(isRetryableTranscriptionFailureCode("audio_format_mismatch")).toBe(
-      false,
-    );
-    expect(
-      isRetryableTranscriptionFailureCode("audio_format_unsupported"),
-    ).toBe(false);
-    expect(
-      isRetryableTranscriptionFailureCode("audio_format_unrecognized"),
-    ).toBe(false);
+    for (const code of [
+      "provider_timeout",
+      "provider_rate_limited",
+      "provider_unavailable",
+      "storage_unavailable",
+    ] as const) {
+      expect(isRetryableTranscriptionFailureCode(code)).toBe(true);
+    }
+
+    for (const code of [
+      "provider_request_failed",
+      "lease_expired",
+      "worker_unexpected_error",
+      "storage_object_missing",
+      "audio_format_mismatch",
+      "audio_format_unsupported",
+      "audio_format_unrecognized",
+    ] as const) {
+      expect(isRetryableTranscriptionFailureCode(code)).toBe(false);
+    }
   });
 });

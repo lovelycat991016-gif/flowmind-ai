@@ -53,9 +53,6 @@ const retryableTranscriptionFailureCodes: ReadonlySet<TranscriptionFailureCode> 
     "provider_rate_limited",
     "provider_unavailable",
     "provider_timeout",
-    "provider_request_failed",
-    "lease_expired",
-    "worker_unexpected_error",
   ]);
 
 export function isRetryableTranscriptionFailureCode(
