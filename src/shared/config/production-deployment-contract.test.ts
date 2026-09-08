@@ -8,6 +8,9 @@ const checklistPath = path.resolve(
   "docs/qa/sprint-17-production-deployment.md",
 );
 const vercelConfigPath = path.resolve("vercel.json");
+const transcriptionDispatchWorkflowPath = path.resolve(
+  ".github/workflows/transcription-dispatch.yml",
+);
 
 describe("production deployment contract", () => {
   it("keeps the committed environment example public and non-sensitive", () => {
@@ -59,5 +62,18 @@ describe("production deployment contract", () => {
         schedule: "30 3 * * *",
       },
     ]);
+  });
+
+  it("dispatches transcription and meeting intelligence from the existing five-minute scheduler", () => {
+    const workflow = readFileSync(transcriptionDispatchWorkflowPath, "utf8");
+
+    expect(workflow).toContain('cron: "2/5 * * * *"');
+    expect(workflow).toContain(
+      "https://flowmind-ai-liard.vercel.app/api/cron/transcription",
+    );
+    expect(workflow).toContain(
+      "https://flowmind-ai-liard.vercel.app/api/cron/meeting-intelligence",
+    );
+    expect(workflow).toContain("Wake meeting intelligence worker");
   });
 });

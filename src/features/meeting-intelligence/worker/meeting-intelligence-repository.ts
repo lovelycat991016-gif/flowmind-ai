@@ -17,14 +17,19 @@ export function createMeetingIntelligenceWorkerRepository(): MeetingIntelligence
         { p_worker_id: workerId, p_lease_seconds: leaseSeconds },
       );
       if (error) throw new Error("Unable to claim meeting intelligence.");
-      if (!data) return null;
-      const row = data as {
-        id: string;
-        meeting_id: string;
-        transcript_id: string | null;
-        user_id: string;
-        locked_by: string;
-      };
+      const rows = data as
+        | {
+            id: string;
+            meeting_id: string;
+            transcript_id: string | null;
+            user_id: string;
+            locked_by: string;
+          }[]
+        | null;
+      if (!rows || rows.length === 0) return null;
+      if (rows.length !== 1)
+        throw new Error("Unable to claim meeting intelligence.");
+      const row = rows[0];
       return {
         id: row.id,
         meetingId: row.meeting_id,

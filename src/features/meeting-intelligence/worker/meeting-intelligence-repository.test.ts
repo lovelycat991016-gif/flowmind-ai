@@ -42,6 +42,53 @@ function chain(data: unknown) {
 }
 
 describe("meeting intelligence worker repository", () => {
+  it("maps one claimed job from the RPC result set", async () => {
+    const row = {
+      id: job.id,
+      meeting_id: job.meetingId,
+      transcript_id: job.transcriptId,
+      user_id: job.userId,
+      locked_by: job.lockedBy,
+    };
+    const rpc = vi.fn().mockResolvedValue({ data: [row], error: null });
+    createWorkerServiceRoleClient.mockReturnValue({ rpc });
+
+    await expect(
+      createMeetingIntelligenceWorkerRepository().claim(job.lockedBy, 300),
+    ).resolves.toEqual(job);
+    expect(rpc).toHaveBeenCalledWith("claim_next_meeting_intelligence", {
+      p_worker_id: job.lockedBy,
+      p_lease_seconds: 300,
+    });
+  });
+
+  it("returns null when the claim RPC result set is empty", async () => {
+    createWorkerServiceRoleClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+    });
+
+    await expect(
+      createMeetingIntelligenceWorkerRepository().claim(job.lockedBy, 300),
+    ).resolves.toBeNull();
+  });
+
+  it("rejects a claim RPC result set containing more than one job", async () => {
+    const row = {
+      id: job.id,
+      meeting_id: job.meetingId,
+      transcript_id: job.transcriptId,
+      user_id: job.userId,
+      locked_by: job.lockedBy,
+    };
+    createWorkerServiceRoleClient.mockReturnValue({
+      rpc: vi.fn().mockResolvedValue({ data: [row, row], error: null }),
+    });
+
+    await expect(
+      createMeetingIntelligenceWorkerRepository().claim(job.lockedBy, 300),
+    ).rejects.toThrow("Unable to claim meeting intelligence.");
+  });
+
   it("fences completion with the current invocation token and an unexpired lease", async () => {
     const query = chain({ id: job.id });
     createWorkerServiceRoleClient.mockReturnValue({
