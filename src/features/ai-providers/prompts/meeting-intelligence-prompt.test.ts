@@ -9,7 +9,7 @@ describe("buildMeetingIntelligencePrompt", () => {
   it("requires the compatible intelligence schema with richer meeting guidance", () => {
     const prompt = buildMeetingIntelligencePrompt("zh-CN");
 
-    expect(MEETING_INTELLIGENCE_PROMPT_VERSION).toBe("meeting_intelligence/v2");
+    expect(MEETING_INTELLIGENCE_PROMPT_VERSION).toBe("meeting_intelligence/v3");
     expect(prompt.system).toContain("summary");
     expect(prompt.system).toContain("key_points");
     expect(prompt.system).toContain("decisions");
@@ -21,6 +21,15 @@ describe("buildMeetingIntelligencePrompt", () => {
     expect(prompt.system).toContain("决策背景");
     expect(prompt.system).toContain("优先级");
     expect(prompt.system).toContain("严重程度");
+  });
+
+  it("defines missing or null owner and deadline as unknown without relaxing task requirements", () => {
+    const prompt = buildMeetingIntelligencePrompt("zh-CN");
+
+    expect(prompt.system).toContain("owner and deadline are optional");
+    expect(prompt.system).toContain("omit the field or use JSON null");
+    expect(prompt.system).toContain("task is always required");
+    expect(prompt.system).toContain("Do not invent people or dates");
   });
 
   it("keeps empty transcript input explicit instead of inventing data", () => {

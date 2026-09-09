@@ -25,13 +25,31 @@ const outputSchema = z.object({
     .array(
       z.object({
         task: z.string().trim().min(1).max(2_000),
-        owner: z.string().trim().min(1).max(200).optional(),
-        deadline: z.iso.date().optional(),
+        owner: z.string().trim().min(1).max(200).nullable().optional(),
+        deadline: z.iso.date().nullable().optional(),
       }),
     )
     .max(50),
   risks: z.array(z.string().trim().min(1).max(2_000)).max(50),
 });
+
+type OutputValidationStage = "raw_schema" | "durable_schema";
+
+function logOutputValidationFailure(
+  stage: OutputValidationStage,
+  error: z.ZodError,
+) {
+  console.error("MEETING_INTELLIGENCE_OUTPUT_INVALID", {
+    stage,
+    issues: error.issues.map((issue) => ({
+      path: issue.path,
+      code: issue.code,
+      ...("expected" in issue && typeof issue.expected === "string"
+        ? { expected: issue.expected }
+        : {}),
+    })),
+  });
+}
 
 function mapProviderError(error: unknown): MeetingIntelligenceFailureCode {
   if (!(error instanceof AIProviderError)) return "provider_request_failed";
@@ -67,6 +85,7 @@ class FactoryMeetingIntelligenceProvider implements MeetingIntelligenceProvider 
 
     const parsed = outputSchema.safeParse(output);
     if (!parsed.success) {
+      logOutputValidationFailure("raw_schema", parsed.error);
       throw new MeetingIntelligenceProviderError("intelligence_output_invalid");
     }
     const result = meetingIntelligenceResultSchema.safeParse({
@@ -90,6 +109,7 @@ class FactoryMeetingIntelligenceProvider implements MeetingIntelligenceProvider 
       outputMetadata: { inputSource: "meeting_text" },
     });
     if (!result.success) {
+      logOutputValidationFailure("durable_schema", result.error);
       throw new MeetingIntelligenceProviderError("intelligence_output_invalid");
     }
     return result.data;

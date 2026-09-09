@@ -36,6 +36,13 @@ function mapTransportFailure(error: unknown): AIProviderErrorCode {
   return "request_failed";
 }
 
+function logStructuredOutputFailure(stage: "response_envelope" | "json_parse") {
+  console.error("AI_STRUCTURED_OUTPUT_INVALID", {
+    provider: "deepseek",
+    stage,
+  });
+}
+
 function requestBody(
   input: StructuredOutputRequest | TextResponseRequest,
   model: string,
@@ -79,6 +86,7 @@ export class DeepSeekProvider implements AIProvider {
     try {
       return JSON.parse(content) as unknown;
     } catch {
+      logStructuredOutputFailure("json_parse");
       throw new AIProviderError("malformed_output");
     }
   }
@@ -120,11 +128,13 @@ export class DeepSeekProvider implements AIProvider {
       };
       const content = payload.choices?.[0]?.message?.content;
       if (typeof content !== "string" || !content.trim()) {
+        if (structured) logStructuredOutputFailure("response_envelope");
         throw new AIProviderError("malformed_output");
       }
       return content;
     } catch (error) {
       if (error instanceof AIProviderError) throw error;
+      if (structured) logStructuredOutputFailure("response_envelope");
       throw new AIProviderError("malformed_output");
     }
   }

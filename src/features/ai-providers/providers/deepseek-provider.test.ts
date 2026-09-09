@@ -35,7 +35,9 @@ describe("DeepSeekProvider", () => {
     expect(JSON.stringify(provider.metadata)).not.toContain("private-key");
     expect(transport).toHaveBeenCalledWith(
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer private-key" }),
+        headers: expect.objectContaining({
+          Authorization: "Bearer private-key",
+        }),
       }),
     );
   });
@@ -58,15 +60,113 @@ describe("DeepSeekProvider", () => {
   });
 
   it("rejects an invalid Chat Completions JSON structure safely", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const provider = new DeepSeekProvider({
       apiKey: "private-key",
       model: "deepseek-chat",
       transport: async () => new Response("{not-json", { status: 200 }),
     });
 
-    await expect(provider.generateStructuredOutput(request)).rejects.toMatchObject(
-      { code: "malformed_output" },
-    );
+    await expect(
+      provider.generateStructuredOutput(request),
+    ).rejects.toMatchObject({ code: "malformed_output" });
+    expect(errorSpy).toHaveBeenCalledWith("AI_STRUCTURED_OUTPUT_INVALID", {
+      provider: "deepseek",
+      stage: "response_envelope",
+    });
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("private-key");
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("{not-json");
+  });
+
+  it("rejects a structured response with empty content at the response-envelope stage", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const provider = new DeepSeekProvider({
+      apiKey: "private-key",
+      model: "deepseek-chat",
+      transport: async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: "   " } }] }),
+          { status: 200 },
+        ),
+    });
+
+    await expect(
+      provider.generateStructuredOutput(request),
+    ).rejects.toMatchObject({ code: "malformed_output" });
+    expect(errorSpy).toHaveBeenCalledWith("AI_STRUCTURED_OUTPUT_INVALID", {
+      provider: "deepseek",
+      stage: "response_envelope",
+    });
+  });
+
+  it("rejects a structured response with missing content at the response-envelope stage", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const provider = new DeepSeekProvider({
+      apiKey: "private-key",
+      model: "deepseek-chat",
+      transport: async () =>
+        new Response(JSON.stringify({ choices: [{ message: {} }] }), {
+          status: 200,
+        }),
+    });
+
+    await expect(
+      provider.generateStructuredOutput(request),
+    ).rejects.toMatchObject({ code: "malformed_output" });
+    expect(errorSpy).toHaveBeenCalledWith("AI_STRUCTURED_OUTPUT_INVALID", {
+      provider: "deepseek",
+      stage: "response_envelope",
+    });
+  });
+
+  it("rejects invalid structured-output JSON at the JSON-parse stage", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const provider = new DeepSeekProvider({
+      apiKey: "private-key",
+      model: "deepseek-chat",
+      transport: async () =>
+        new Response(
+          JSON.stringify({
+            choices: [{ message: { content: "not-json" } }],
+          }),
+          { status: 200 },
+        ),
+    });
+
+    await expect(
+      provider.generateStructuredOutput(request),
+    ).rejects.toMatchObject({ code: "malformed_output" });
+    expect(errorSpy).toHaveBeenCalledWith("AI_STRUCTURED_OUTPUT_INVALID", {
+      provider: "deepseek",
+      stage: "json_parse",
+    });
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("not-json");
+  });
+
+  it("rejects Markdown-fenced JSON instead of silently normalizing the provider contract", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const provider = new DeepSeekProvider({
+      apiKey: "private-key",
+      model: "deepseek-chat",
+      transport: async () =>
+        new Response(
+          JSON.stringify({
+            choices: [
+              { message: { content: '```json\n{"summary":"已生成"}\n```' } },
+            ],
+          }),
+          { status: 200 },
+        ),
+    });
+
+    await expect(
+      provider.generateStructuredOutput(request),
+    ).rejects.toMatchObject({ code: "malformed_output" });
+    expect(errorSpy).toHaveBeenCalledWith("AI_STRUCTURED_OUTPUT_INVALID", {
+      provider: "deepseek",
+      stage: "json_parse",
+    });
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("已生成");
   });
 
   it("aborts the server fetch after the bounded provider timeout", async () => {
