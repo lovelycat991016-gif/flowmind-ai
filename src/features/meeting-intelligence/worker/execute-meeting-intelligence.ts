@@ -5,8 +5,17 @@ import type {
 import type { MeetingIntelligenceProvider } from "@/features/meeting-intelligence/providers/meeting-intelligence-provider";
 import { MEETING_INTELLIGENCE_PROMPT_VERSION } from "@/features/ai-providers/prompts/meeting-intelligence-prompt";
 import { recordServerAiUsageEvent } from "@/features/ai-usage/record-ai-usage-event";
-import { createMeetingIntelligenceWorkerRepository } from "./meeting-intelligence-repository";
 import { createInvocationToken } from "@/features/transcription/worker/create-invocation-token";
+import {
+  calculateInvocationDeadline,
+  TRANSCRIPTION_EXECUTION_BUDGET_MS,
+  TRANSCRIPTION_TERMINAL_RESERVE_MS,
+} from "@/features/transcription/worker/invocation-deadline";
+
+import { createMeetingIntelligenceWorkerRepository } from "./meeting-intelligence-repository";
+
+const MEETING_INTELLIGENCE_PROVIDER_WINDOW_MS = 30_000;
+const MEETING_INTELLIGENCE_MAX_JOBS_PER_INVOCATION = 3;
 
 export type ClaimedMeetingIntelligence = {
   id: string;
@@ -42,45 +51,50 @@ function code(error: unknown): MeetingIntelligenceFailureCode {
     return error.code as MeetingIntelligenceFailureCode;
   return "worker_unexpected_error";
 }
-export async function executeNextMeetingIntelligence(input: {
-  workerId: string;
-  leaseSeconds: number;
+
+type ProcessedJobResult =
+  | { status: "completed"; jobId: string }
+  | {
+      status: "failed";
+      jobId: string;
+      code: MeetingIntelligenceFailureCode;
+    };
+
+type BatchStopReason = "queue_empty" | "budget_exhausted" | "job_limit_reached";
+
+function hasSafeClaimBudget(input: { now: () => number; startedAtMs: number }) {
+  const deadline = calculateInvocationDeadline({
+    nowMs: input.now(),
+    startedAtMs: input.startedAtMs,
+    budgetMs: TRANSCRIPTION_EXECUTION_BUDGET_MS,
+    terminalReserveMs: TRANSCRIPTION_TERMINAL_RESERVE_MS,
+    providerCapMs: MEETING_INTELLIGENCE_PROVIDER_WINDOW_MS,
+  });
+
+  return deadline.providerTimeoutMs === MEETING_INTELLIGENCE_PROVIDER_WINDOW_MS;
+}
+
+async function processClaimedJob(input: {
+  job: ClaimedMeetingIntelligence;
   provider: MeetingIntelligenceProvider;
   dependencies: MeetingIntelligenceWorkerDependencies;
-}) {
-  const invocationToken = createInvocationToken(input.workerId);
-  const job = await input.dependencies.claim(
-    invocationToken,
-    input.leaseSeconds,
-  );
-  if (!job) return { status: "idle" as const };
-  if (job.lockedBy !== invocationToken)
-    throw new Error("Unable to execute meeting intelligence.");
-  const startedAt = Date.now();
+  now: () => number;
+}): Promise<ProcessedJobResult> {
+  const { job, provider, dependencies, now } = input;
+  const startedAt = now();
+  let result: MeetingIntelligenceResult;
+
   try {
-    const source = await input.dependencies.loadInput(job);
-    const result = await input.provider.generate({
+    const source = await dependencies.loadInput(job);
+    result = await provider.generate({
       transcriptContent: source.content,
       transcriptLanguage: source.language,
       promptVersion: MEETING_INTELLIGENCE_PROMPT_VERSION,
     });
-    await input.dependencies.complete(job, result);
-    await recordServerAiUsageEvent({
-      userId: job.userId,
-      meetingId: job.meetingId,
-      meetingIntelligenceId: job.id,
-      operationType: "meeting_intelligence_generation",
-      provider: result.provider,
-      modelIdentifier: result.modelIdentifier,
-      outcome: "completed",
-      failureCode: null,
-      latencyMs: Date.now() - startedAt,
-    });
-    return { status: "completed" as const, jobId: job.id };
   } catch (error) {
     const failureCode = code(error);
     try {
-      await input.dependencies.fail(job, failureCode);
+      await dependencies.fail(job, failureCode);
     } catch {
       throw new Error("Unable to execute meeting intelligence.");
     }
@@ -93,10 +107,84 @@ export async function executeNextMeetingIntelligence(input: {
       modelIdentifier: null,
       outcome: "failed",
       failureCode,
-      latencyMs: Date.now() - startedAt,
+      latencyMs: now() - startedAt,
     });
-    return { status: "failed" as const, jobId: job.id, code: failureCode };
+    return { status: "failed", jobId: job.id, code: failureCode };
   }
+
+  try {
+    await dependencies.complete(job, result);
+  } catch {
+    throw new Error("Unable to execute meeting intelligence.");
+  }
+  await recordServerAiUsageEvent({
+    userId: job.userId,
+    meetingId: job.meetingId,
+    meetingIntelligenceId: job.id,
+    operationType: "meeting_intelligence_generation",
+    provider: result.provider,
+    modelIdentifier: result.modelIdentifier,
+    outcome: "completed",
+    failureCode: null,
+    latencyMs: now() - startedAt,
+  });
+  return { status: "completed", jobId: job.id };
+}
+
+export async function executeNextMeetingIntelligence(input: {
+  workerId: string;
+  leaseSeconds: number;
+  provider: MeetingIntelligenceProvider;
+  dependencies: MeetingIntelligenceWorkerDependencies;
+  now?: () => number;
+}) {
+  const invocationToken = createInvocationToken(input.workerId);
+  const now = input.now ?? Date.now;
+  const startedAtMs = now();
+  const jobs: ProcessedJobResult[] = [];
+  let stopReason: BatchStopReason = "budget_exhausted";
+
+  while (jobs.length < MEETING_INTELLIGENCE_MAX_JOBS_PER_INVOCATION) {
+    if (!hasSafeClaimBudget({ now, startedAtMs })) {
+      stopReason = "budget_exhausted";
+      break;
+    }
+
+    let job;
+    try {
+      job = await input.dependencies.claim(invocationToken, input.leaseSeconds);
+    } catch {
+      throw new Error("Unable to execute meeting intelligence.");
+    }
+
+    if (!job) {
+      stopReason = "queue_empty";
+      break;
+    }
+    if (job.lockedBy !== invocationToken) {
+      throw new Error("Unable to execute meeting intelligence.");
+    }
+
+    jobs.push(
+      await processClaimedJob({
+        job,
+        provider: input.provider,
+        dependencies: input.dependencies,
+        now,
+      }),
+    );
+  }
+
+  if (jobs.length === MEETING_INTELLIGENCE_MAX_JOBS_PER_INVOCATION) {
+    stopReason = "job_limit_reached";
+  }
+  if (jobs.length === 0) {
+    return stopReason === "budget_exhausted"
+      ? { status: "idle" as const, stopReason }
+      : { status: "idle" as const };
+  }
+
+  return { status: "processed" as const, jobs, stopReason };
 }
 
 export async function executeNextMeetingIntelligenceWithServiceRole(input: {
