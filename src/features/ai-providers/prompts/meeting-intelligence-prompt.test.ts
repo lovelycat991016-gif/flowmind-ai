@@ -9,7 +9,7 @@ describe("buildMeetingIntelligencePrompt", () => {
   it("requires the compatible intelligence schema with richer meeting guidance", () => {
     const prompt = buildMeetingIntelligencePrompt("zh-CN");
 
-    expect(MEETING_INTELLIGENCE_PROMPT_VERSION).toBe("meeting_intelligence/v3");
+    expect(MEETING_INTELLIGENCE_PROMPT_VERSION).toBe("meeting_intelligence/v4");
     expect(prompt.system).toContain("summary");
     expect(prompt.system).toContain("key_points");
     expect(prompt.system).toContain("decisions");
@@ -30,6 +30,23 @@ describe("buildMeetingIntelligencePrompt", () => {
     expect(prompt.system).toContain("omit the field or use JSON null");
     expect(prompt.system).toContain("task is always required");
     expect(prompt.system).toContain("Do not invent people or dates");
+  });
+
+  it("requires evidence-backed deadlines to use only the YYYY-MM-DD date format", () => {
+    const prompt = buildMeetingIntelligencePrompt("zh-CN");
+
+    expect(prompt.system).toContain("deadline must use YYYY-MM-DD");
+    expect(prompt.system).toContain(
+      "deadline may be omitted or set to JSON null",
+    );
+    expect(prompt.system).toContain("Never guess a deadline");
+    expect(prompt.system).toContain(
+      'Do not use natural-language dates such as "下周五" or "月底"',
+    );
+    expect(prompt.system).toContain(
+      'Do not include a time or timestamp such as "2026-09-15T10:00:00Z"',
+    );
+    expect(prompt.system).toContain("Do not use any other date format");
   });
 
   it("keeps empty transcript input explicit instead of inventing data", () => {
