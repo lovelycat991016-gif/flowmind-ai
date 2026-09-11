@@ -1,4 +1,5 @@
-export type EndpointName = "transcription" | "meeting-intelligence";
+export type EndpointName =
+  "transcription" | "meeting-intelligence" | "meeting-knowledge";
 
 export type FetchLike = (input: string, init: RequestInit) => Promise<Response>;
 
@@ -51,6 +52,10 @@ export const ENDPOINTS = {
   meetingIntelligence: {
     name: "meeting-intelligence",
     url: "https://flowmind-ai-liard.vercel.app/api/cron/meeting-intelligence",
+  },
+  meetingKnowledge: {
+    name: "meeting-knowledge",
+    url: "https://flowmind-ai-liard.vercel.app/api/cron/meeting-knowledge",
   },
 } as const satisfies Record<string, EndpointDefinition>;
 
@@ -289,7 +294,11 @@ export async function runSchedulerRelay(
   cronSecret: string,
   dependencies: RelayDependencies,
 ): Promise<RelayRunResult> {
-  const endpoints = [ENDPOINTS.transcription, ENDPOINTS.meetingIntelligence];
+  const endpoints = [
+    ENDPOINTS.transcription,
+    ENDPOINTS.meetingIntelligence,
+    ENDPOINTS.meetingKnowledge,
+  ];
   const settledResults = await Promise.allSettled(
     endpoints.map((endpoint) =>
       invokeEndpoint(endpoint, cronSecret, dependencies),

@@ -118,7 +118,7 @@ function successfulFetch() {
 }
 
 describe("Cloudflare scheduler relay", () => {
-  it("calls both production endpoints with GET", async () => {
+  it("calls all production endpoints with GET", async () => {
     const fetch = successfulFetch();
     const { dependencies } = createHarness(fetch);
 
@@ -127,13 +127,14 @@ describe("Cloudflare scheduler relay", () => {
     expect(fetch.mock.calls.map(([url]) => url)).toEqual([
       "https://flowmind-ai-liard.vercel.app/api/cron/transcription",
       "https://flowmind-ai-liard.vercel.app/api/cron/meeting-intelligence",
+      "https://flowmind-ai-liard.vercel.app/api/cron/meeting-knowledge",
     ]);
     expect(fetch.mock.calls.every(([, init]) => init.method === "GET")).toBe(
       true,
     );
   });
 
-  it("starts both endpoint calls before either one settles", async () => {
+  it("starts all endpoint calls before any one settles", async () => {
     const resolvers: Array<(response: Response) => void> = [];
     const started: string[] = [];
     const fetch = vi.fn<FetchLike>(
@@ -146,19 +147,22 @@ describe("Cloudflare scheduler relay", () => {
     const { dependencies } = createHarness(fetch);
 
     const relayPromise = runSchedulerRelay(CRON_SECRET, dependencies);
-    await vi.waitFor(() => expect(started).toHaveLength(2));
+    await vi.waitFor(() => expect(started).toHaveLength(3));
 
     expect(started).toEqual([
       ENDPOINTS.transcription.url,
       ENDPOINTS.meetingIntelligence.url,
+      ENDPOINTS.meetingKnowledge.url,
     ]);
     resolvers.forEach((resolve) => resolve(jsonResponse()));
     await relayPromise;
   });
 
-  it("allows meeting intelligence to finish when transcription fails", async () => {
+  it("collects all other endpoint results when one endpoint fails", async () => {
     const fetch = vi.fn<FetchLike>(async (url) => {
-      if (url === ENDPOINTS.transcription.url) throw new TypeError("network");
+      if (url === ENDPOINTS.meetingKnowledge.url) {
+        throw new TypeError("network");
+      }
       return jsonResponse();
     });
     const { dependencies } = createHarness(fetch);
@@ -167,14 +171,13 @@ describe("Cloudflare scheduler relay", () => {
 
     expect(result.results).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ endpoint: "transcription", ok: false }),
+        expect.objectContaining({ endpoint: "meeting-knowledge", ok: false }),
+        expect.objectContaining({ endpoint: "transcription", ok: true }),
         expect.objectContaining({ endpoint: "meeting-intelligence", ok: true }),
       ]),
     );
     expect(
-      fetch.mock.calls.filter(
-        ([url]) => url === ENDPOINTS.meetingIntelligence.url,
-      ),
+      fetch.mock.calls.filter(([url]) => url === ENDPOINTS.transcription.url),
     ).toHaveLength(1);
   });
 
@@ -196,6 +199,7 @@ describe("Cloudflare scheduler relay", () => {
           endpoint: "meeting-intelligence",
           ok: false,
         }),
+        expect.objectContaining({ endpoint: "meeting-knowledge", ok: true }),
       ]),
     );
     expect(
@@ -423,19 +427,24 @@ describe("Cloudflare scheduler relay", () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it("sends the secret only as the Bearer authorization value", async () => {
+  it("sends the same Bearer authorization to every endpoint", async () => {
     const fetch = successfulFetch();
     const { dependencies } = createHarness(fetch);
 
-    await invokeEndpoint(ENDPOINTS.transcription, CRON_SECRET, dependencies);
+    await runSchedulerRelay(CRON_SECRET, dependencies);
 
-    expect(fetch).toHaveBeenCalledWith(
-      ENDPOINTS.transcription.url,
-      expect.objectContaining({
-        method: "GET",
-        headers: { Authorization: `Bearer ${CRON_SECRET}` },
-      }),
-    );
+    expect(fetch).toHaveBeenCalledTimes(3);
+    for (const [url, init] of fetch.mock.calls) {
+      expect(
+        Object.values(ENDPOINTS).some((endpoint) => endpoint.url === url),
+      ).toBe(true);
+      expect(init).toEqual(
+        expect.objectContaining({
+          method: "GET",
+          headers: { Authorization: `Bearer ${CRON_SECRET}` },
+        }),
+      );
+    }
   });
 
   it("never includes the secret in structured logs", async () => {
@@ -607,16 +616,19 @@ describe("Cloudflare scheduler relay", () => {
     expect(
       logs.filter((entry) => entry.endpoint === "meeting-intelligence"),
     ).toHaveLength(1);
+    expect(
+      logs.filter((entry) => entry.endpoint === "meeting-knowledge"),
+    ).toHaveLength(1);
   });
 
-  it("waits for both endpoint results before the scheduled handler settles", async () => {
-    let resolveMeetingIntelligence: ((response: Response) => void) | undefined;
+  it("waits for all endpoint results before the scheduled handler settles", async () => {
+    const resolveDeferred: Array<(response: Response) => void> = [];
     const fetch = vi.fn<FetchLike>((url) => {
       if (url === ENDPOINTS.transcription.url) {
         return Promise.resolve(jsonResponse());
       }
       return new Promise((resolve) => {
-        resolveMeetingIntelligence = resolve;
+        resolveDeferred.push(resolve);
       });
     });
     const { dependencies } = createHarness(fetch);
@@ -633,9 +645,10 @@ describe("Cloudflare scheduler relay", () => {
         settled = true;
       });
 
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
     expect(settled).toBe(false);
-    resolveMeetingIntelligence?.(jsonResponse());
+    expect(resolveDeferred).toHaveLength(2);
+    resolveDeferred.forEach((resolve) => resolve(jsonResponse()));
     await scheduledPromise;
     expect(settled).toBe(true);
   });
