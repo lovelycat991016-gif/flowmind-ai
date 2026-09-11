@@ -674,6 +674,102 @@ describe("Cloudflare scheduler relay", () => {
     ).toBe(true);
   });
 
+  it("exposes fetch and scheduled handlers and returns all endpoint results for GET", async () => {
+    const fetch = successfulFetch();
+    const { dependencies } = createHarness(fetch);
+    const handler = createScheduledHandler(dependencies);
+    const fetchHandler = Reflect.get(handler, "fetch") as (
+      request: Request,
+      env: { CRON_SECRET: string },
+      context: { waitUntil(promise: Promise<unknown>): void },
+    ) => Promise<Response>;
+
+    expect(typeof handler.scheduled).toBe("function");
+    expect(typeof fetchHandler).toBe("function");
+
+    const response = await fetchHandler(
+      new Request("https://relay.example", { method: "GET" }),
+      { CRON_SECRET },
+      { waitUntil: vi.fn() },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      results: expect.arrayContaining([
+        expect.objectContaining({ endpoint: "transcription", ok: true }),
+        expect.objectContaining({
+          endpoint: "meeting-intelligence",
+          ok: true,
+        }),
+        expect.objectContaining({ endpoint: "meeting-knowledge", ok: true }),
+      ]),
+    });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(JSON.stringify(body)).not.toContain(CRON_SECRET);
+    expect(JSON.stringify(body)).not.toContain("Authorization");
+  });
+
+  it("returns 405 for non-GET requests without invoking the relay", async () => {
+    const fetch = successfulFetch();
+    const { dependencies } = createHarness(fetch);
+    const handler = createScheduledHandler(dependencies);
+    const fetchHandler = Reflect.get(handler, "fetch") as (
+      request: Request,
+      env: { CRON_SECRET: string },
+      context: { waitUntil(promise: Promise<unknown>): void },
+    ) => Promise<Response>;
+
+    const response = await fetchHandler(
+      new Request("https://relay.example", { method: "POST" }),
+      { CRON_SECRET },
+      { waitUntil: vi.fn() },
+    );
+
+    expect(response.status).toBe(405);
+    expect(response.headers.get("allow")).toBe("GET");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns independent relay results when one GET endpoint fails", async () => {
+    const fetch = vi.fn<FetchLike>(async (url) => {
+      if (url === ENDPOINTS.meetingKnowledge.url) {
+        throw new TypeError("network");
+      }
+      return jsonResponse();
+    });
+    const { dependencies } = createHarness(fetch);
+    const handler = createScheduledHandler(dependencies);
+    const fetchHandler = Reflect.get(handler, "fetch") as (
+      request: Request,
+      env: { CRON_SECRET: string },
+      context: { waitUntil(promise: Promise<unknown>): void },
+    ) => Promise<Response>;
+
+    const response = await fetchHandler(
+      new Request("https://relay.example", { method: "GET" }),
+      { CRON_SECRET },
+      { waitUntil: vi.fn() },
+    );
+    const body = (await response.json()) as {
+      results: Array<{ endpoint: string; ok: boolean }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ endpoint: "transcription", ok: true }),
+        expect.objectContaining({
+          endpoint: "meeting-intelligence",
+          ok: true,
+        }),
+        expect.objectContaining({ endpoint: "meeting-knowledge", ok: false }),
+      ]),
+    );
+    expect(JSON.stringify(body)).not.toContain(CRON_SECRET);
+    expect(JSON.stringify(body)).not.toContain("Authorization");
+  });
+
   it("rejects missing CRON_SECRET without calling either endpoint", async () => {
     const fetch = successfulFetch();
     const { dependencies } = createHarness(fetch);

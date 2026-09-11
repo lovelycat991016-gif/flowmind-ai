@@ -25,6 +25,14 @@ export interface ScheduledHandler {
   ): Promise<void>;
 }
 
+export interface WorkerHandler extends ScheduledHandler {
+  fetch(
+    request: Request,
+    env: Env,
+    context: ExecutionContext,
+  ): Promise<Response>;
+}
+
 const DEFAULT_ENDPOINT_TIMEOUT_MS = 300_000;
 const DEFAULT_RETRY_DELAY_MS = 5_000;
 
@@ -40,8 +48,44 @@ const defaultDependencies: RelayDependencies = {
 
 export function createScheduledHandler(
   dependencies: RelayDependencies = defaultDependencies,
-): ScheduledHandler {
+): WorkerHandler {
   return {
+    async fetch(request, env, context) {
+      void context;
+
+      if (request.method !== "GET") {
+        return new Response("Method Not Allowed", {
+          status: 405,
+          headers: { Allow: "GET" },
+        });
+      }
+
+      if (!env.CRON_SECRET?.trim()) {
+        return new Response(
+          JSON.stringify({ error: "CRON_SECRET is not configured" }),
+          {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }
+
+      try {
+        const result = await runSchedulerRelay(env.CRON_SECRET, dependencies);
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Scheduler relay failed" }),
+          {
+            status: 500,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }
+    },
     async scheduled(controller, env, context) {
       void controller;
       void context;
